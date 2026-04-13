@@ -2109,7 +2109,7 @@ select.form-control {
       <main class="content">
         <!-- 一覧画面: v-if(初回生成) + v-show(2回目以降は即表示) パターンで高速化 -->
         <project-list v-if="visitedMenus.project" v-show="activeMenu === 'project'" :projects="projects" :customers="customers" :employees="employees" :constructions="allConstructions" @view-project="viewProjectDetail" @new-project="newProject" @save-project="saveProjectFromList" @delete-project="deleteProject"></project-list>
-        <contract-list-view v-if="visitedMenus.contract" v-show="activeMenu === 'contract'" :contracts="contracts" @new-contract="newContract" @view-contract="viewContract" @delete-contract="deleteContract"></contract-list-view>
+        <contract-list-view v-if="visitedMenus.contract" v-show="activeMenu === 'contract'" :contracts="contracts" @new-contract="newContract" @view-contract="viewContract" @delete-contract="deleteContract" @copy-contract="copyContract"></contract-list-view>
         <invoice-payment v-if="visitedMenus.invoice" v-show="activeMenu === 'invoice'" :projects="projects" :customers="customers" :vendors="vendors" :all-constructions="allConstructions" @show-toast="showToast"></invoice-payment>
         <settlement-view v-if="visitedMenus.settlement" v-show="activeMenu === 'settlement'" :projects="projects" :all-constructions="allConstructions" @show-toast="showToast"></settlement-view>
         <budget-management v-if="visitedMenus.budget" v-show="activeMenu === 'budget'" :projects="projects" @show-toast="showToast"></budget-management>
@@ -2121,7 +2121,7 @@ select.form-control {
         <schedule-management v-if="visitedMenus.schedule" v-show="activeMenu === 'schedule'" :current-user="currentUser" @show-toast="showToast"></schedule-management>
         <!-- 詳細/フォーム画面: 毎回異なるデータを表示するため v-if のまま -->
         <project-detail-view v-if="activeMenu === 'projectDetail'" :project="selectedProject" :constructions="projectConstructions" :orders="projectOrders" :employees="employees" :initial-tab="initialProjectTab" @back="backToProjectList" @delete-project="deleteProjectAndBack" @save-construction="saveProjectConstruction" @delete-construction="onDeleteConstruction" @view-order="viewOrder" @new-order="newOrderForProject" @export-agreement="exportOrder" @export-order="issueOrderSheet" @show-toast="showToast"></project-detail-view>
-        <contract-form v-if="activeMenu === 'contractForm'" :contract="selectedContract" :customers="customers" :employees="employees" :current-user="currentUser" :all-contracts="contracts" @save="saveContract" @back="backToContractList" @delete="deleteContractAndBack" @export-excel="exportContractExcel" @export-excel-small="exportContractExcelSmall" @export-pdf="exportContractPdf" @show-toast="showToast"></contract-form>
+        <contract-form v-if="activeMenu === 'contractForm'" :contract="selectedContract" :customers="customers" :employees="employees" :current-user="currentUser" :all-contracts="contracts" @save="saveContract" @back="backToContractList" @delete="deleteContractAndBack" @export-excel="exportContractExcel" @export-excel-small="exportContractExcelSmall" @export-pdf="exportContractPdf" @show-toast="showToast" @copy-contract="copyContract"></contract-form>
         <order-form v-if="activeMenu === 'order'" :order="selectedOrder" :vendors="vendors" :current-user="currentUser" @save="saveOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @back="backToProjectDetail" @show-toast="showToast"></order-form>
       </main>
     </div>
@@ -3310,7 +3310,7 @@ const ContractListView = {
     }
   },
 
-  emits: ['new-contract', 'view-contract', 'delete-contract'],
+  emits: ['new-contract', 'view-contract', 'delete-contract', 'copy-contract'],
 
   data() {
     return {
@@ -3573,6 +3573,7 @@ const ContractListView = {
                   <th style="width: 130px; text-align: right;">契約金額</th>
                   <th style="width: 90px;">ステータス</th>
                   <th style="width: 100px;">作成日</th>
+                  <th style="width: 70px;">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -3592,9 +3593,12 @@ const ContractListView = {
                     </span>
                   </td>
                   <td>{{ formatDate(contract.createdAt) }}</td>
+                  <td @click.stop>
+                    <button class="btn btn-sm btn-secondary" @click="$emit('copy-contract', contract.contractId)" title="複写して新規作成">複写</button>
+                  </td>
                 </tr>
                 <tr v-if="pagedContracts.length === 0">
-                  <td colspan="6" class="text-center text-muted" style="padding: 40px;">
+                  <td colspan="7" class="text-center text-muted" style="padding: 40px;">
                     <template v-if="searchKeyword || statusFilter">
                       条件に一致する契約協議がありません
                     </template>
@@ -4769,7 +4773,7 @@ const ContractForm = {
     }
   },
 
-  emits: ['save', 'back', 'delete', 'export-excel', 'export-excel-small', 'export-pdf', 'show-toast'],
+  emits: ['save', 'back', 'delete', 'export-excel', 'export-excel-small', 'export-pdf', 'show-toast', 'copy-contract'],
 
   data() {
     return {
@@ -5535,6 +5539,9 @@ const ContractForm = {
             </button>
             <button class="btn btn-primary" @click="onExportExcelSmall" :disabled="!form.contractId" style="display: flex; align-items: center; gap: 6px; background-color: #0d47a1;">
               <span style="font-size: 16px;">📋</span> 小口用出力
+            </button>
+            <button v-if="form.contractId" class="btn btn-secondary btn-sm" @click="$emit('copy-contract', form.contractId)" style="display: flex; align-items: center; gap: 4px;">
+              複写して新規作成
             </button>
             <button v-if="form.contractId" class="btn btn-danger btn-sm" @click="onDelete" :disabled="isApproved" style="display: flex; align-items: center; gap: 4px;">
               削除
@@ -14406,6 +14413,38 @@ const app = createApp({
       } catch (error) {
         console.error('契約協議書取得エラー:', error);
         this.showToast('契約協議書の取得に失敗しました', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * 契約協議書を複写して新規作成
+     */
+    async copyContract(contractId) {
+      this.loading = true;
+      try {
+        const contract = await GasApi.getContractById(contractId, 'solution');
+        const today = new Date().toISOString().split('T')[0];
+        // 元データをコピーし、ID・日付・承認系フィールドをリセット
+        this.selectedContract = {
+          ...contract,
+          '協議書ID': '',
+          '作成日': today,
+          '契約協議書日付': today,
+          '作成者': this.currentUser?.name || '',
+          '承認ステータス': '作成中',
+          '承認者': '',
+          '承認日': '',
+          'コメント': '',
+          '出力トリガー': '',
+          '契約協議書(ソリューション)パス': ''
+        };
+        this.activeMenu = 'contractForm';
+        this.showToast('契約協議書を複写しました。内容を確認して保存してください。', 'success');
+      } catch (error) {
+        console.error('契約協議書複写エラー:', error);
+        this.showToast('契約協議書の複写に失敗しました', 'error');
       } finally {
         this.loading = false;
       }
