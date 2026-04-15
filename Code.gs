@@ -2226,11 +2226,37 @@ function createPaymentFromOrder(orderId) {
     }
 
     // 支払条件を適用（でんさい・安推協会費・振込の計算）
+    // まずマスタのデフォルト値を取得
     var termsResult = applyVendorPaymentTerms(vendorId, orderAmount, orderCategory);
     if (!termsResult.success) {
       return termsResult;
     }
     var terms = termsResult.data;
+
+    // 注文書にカスタム支払い条件が設定されている場合、マスタの値をオーバーライドする
+    var orderNoteRate = order['支払条件(手形%)'];
+    var orderCashRate = order['支払条件(現金%)'];
+    if (orderNoteRate !== undefined && orderNoteRate !== '' && orderCashRate !== undefined && orderCashRate !== '') {
+      var customNoteRatio = Number(orderNoteRate) || 0;
+      var amountExcludingTax = orderAmount;
+      var tax = Math.floor(amountExcludingTax * 0.1);
+      var amountIncludingTax = amountExcludingTax + tax;
+      // 手形額: 税抜金額 × カスタム比率（万円未満切捨て）
+      terms.notePayment = Math.floor(amountExcludingTax * customNoteRatio / 100 / 10000) * 10000;
+      // 振込金額: 税込金額 - 手形額 - 安推協会費（帳尻合わせ）
+      terms.cashPayment = amountIncludingTax - terms.notePayment - terms.safetyFee;
+      terms.noteRatio = customNoteRatio;
+    }
+
+    // 注文書にカスタム締日・支払日が設定されている場合もオーバーライド
+    var orderClosingDay = order['支払条件(毎月◯日締め切り)'];
+    var orderDueDay = order['支払条件(翌月◯日支払)'];
+    if (orderClosingDay !== undefined && orderClosingDay !== '') {
+      terms.closingDay = orderClosingDay;
+    }
+    if (orderDueDay !== undefined && orderDueDay !== '') {
+      terms.paymentDay = orderDueDay;
+    }
 
     // 支払予定日を計算
     var closingDay = Number(terms.closingDay) || 25;
@@ -3587,12 +3613,20 @@ function calculateMonthlyVendorPayment(vendorId, yearMonth) {
       fullCashTotalInTax += p.amountIncludingTax;
     });
 
+    // 通常グループの手形・現金を各レコードの保存値から合算
+    var normalNoteTotal = 0;
+    var normalCashTotal = 0;
+    normalGroup.forEach(function(p) {
+      normalNoteTotal += (p.notePayment || 0);
+      normalCashTotal += (p.cashPayment || 0);
+    });
+
     // 条件③: 通常グループの税抜合計が10万円未満 → でんさい0（全額振込扱い）
     var notePayment = 0;
     var isSmallAmount = normalTotalExTax < 100000;
     if (!isSmallAmount && normalTotalExTax > 0) {
-      // 手形額: 通常グループ税抜合計 × 50%（万円未満切捨て）
-      notePayment = Math.floor(normalTotalExTax * 0.5 / 10000) * 10000;
+      // 各支払レコードに保存された手形額を合算
+      notePayment = normalNoteTotal;
     }
 
     // 振込金額: 通常グループ税込合計 - 手形 - 安推協 + 全額振込グループ税込合計
@@ -4391,6 +4425,9 @@ function enrichContractDataForDocument(contract, department) {
         // ショートカット
         data['顧客名'] = customer['顧客名'];
         data['顧客名_表示'] = customer['顧客名'];
+        data['顧客住所'] = customer['住所'];
+        data['顧客電話番号'] = customer['電話番号'];
+        data['顧客ふりがな'] = customer['ふりがな'];
       }
     } catch (e) {
       Logger.log('顧客情報取得エラー: ' + e.message);

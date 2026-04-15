@@ -2120,9 +2120,9 @@ select.form-control {
         <construction-ledger v-if="visitedMenus.ledger" v-show="activeMenu === 'ledger'" :current-user="currentUser" @show-toast="showToast"></construction-ledger>
         <schedule-management v-if="visitedMenus.schedule" v-show="activeMenu === 'schedule'" :current-user="currentUser" @show-toast="showToast"></schedule-management>
         <!-- 詳細/フォーム画面: 毎回異なるデータを表示するため v-if のまま -->
-        <project-detail-view v-if="activeMenu === 'projectDetail'" :project="selectedProject" :constructions="projectConstructions" :orders="projectOrders" :employees="employees" :initial-tab="initialProjectTab" @back="backToProjectList" @delete-project="deleteProjectAndBack" @save-construction="saveProjectConstruction" @delete-construction="onDeleteConstruction" @view-order="viewOrder" @new-order="newOrderForProject" @export-agreement="exportOrder" @export-order="issueOrderSheet" @show-toast="showToast"></project-detail-view>
+        <project-detail-view v-if="activeMenu === 'projectDetail'" :project="selectedProject" :constructions="projectConstructions" :orders="projectOrders" :employees="employees" :initial-tab="initialProjectTab" @back="backToProjectList" @delete-project="deleteProjectAndBack" @save-construction="saveProjectConstruction" @delete-construction="onDeleteConstruction" @view-order="viewOrder" @new-order="newOrderForProject" @copy-order="copyOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @show-toast="showToast"></project-detail-view>
         <contract-form v-if="activeMenu === 'contractForm'" :contract="selectedContract" :customers="customers" :employees="employees" :current-user="currentUser" :all-contracts="contracts" @save="saveContract" @back="backToContractList" @delete="deleteContractAndBack" @export-excel="exportContractExcel" @export-excel-small="exportContractExcelSmall" @export-pdf="exportContractPdf" @show-toast="showToast" @copy-contract="copyContract"></contract-form>
-        <order-form v-if="activeMenu === 'order'" :order="selectedOrder" :vendors="vendors" :current-user="currentUser" @save="saveOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @back="backToProjectDetail" @show-toast="showToast"></order-form>
+        <order-form v-if="activeMenu === 'order'" :order="selectedOrder" :vendors="vendors" :current-user="currentUser" @save="saveOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @copy-order="copyOrder" @back="backToProjectDetail" @show-toast="showToast"></order-form>
       </main>
     </div>
     <div v-if="loading" class="loading-overlay"><div class="loading-spinner"></div><p>読み込み中...</p></div>
@@ -3681,7 +3681,7 @@ const ProjectDetailView = {
     }
   },
 
-  emits: ['back', 'delete-project', 'save-construction', 'delete-construction', 'view-order', 'new-order', 'load-orders-for-construction', 'export-agreement', 'export-order', 'show-toast'],
+  emits: ['back', 'delete-project', 'save-construction', 'delete-construction', 'view-order', 'new-order', 'copy-order', 'load-orders-for-construction', 'export-agreement', 'export-order', 'show-toast'],
 
   watch: {
     initialTab: {
@@ -4288,6 +4288,7 @@ const ProjectDetailView = {
                             <button class="btn btn-sm btn-secondary" @click="onViewOrder(order)">詳細</button>
                             <button class="btn btn-sm btn-secondary" @click="$emit('export-agreement', order.orderId)" title="注文協議書を出力">協議書</button>
                             <button class="btn btn-sm btn-secondary" @click="$emit('export-order', order.orderId)" title="注文書を発行">注文書</button>
+                            <button class="btn btn-sm btn-secondary" @click="$emit('copy-order', order.orderId)" title="複写して新規作成">複写</button>
                           </div>
                         </td>
                       </tr>
@@ -6122,7 +6123,7 @@ const OrderForm = {
     }
   },
 
-  emits: ['save', 'export-order', 'export-agreement', 'back', 'show-toast'],
+  emits: ['save', 'export-order', 'export-agreement', 'copy-order', 'back', 'show-toast'],
 
   data() {
     return {
@@ -7401,6 +7402,9 @@ const OrderForm = {
             </button>
             <button class="btn btn-secondary" @click="onExportOrder" :disabled="!form.orderId">
               注文書出力
+            </button>
+            <button v-if="form.orderId" class="btn btn-secondary btn-sm" @click="$emit('copy-order', form.orderId)" style="display: flex; align-items: center; gap: 4px;">
+              複写して新規作成
             </button>
             <button class="btn btn-primary" @click="onSave" :disabled="saving">
               {{ saving ? '保存中...' : '保存' }}
@@ -14402,6 +14406,39 @@ const app = createApp({
     },
 
     /**
+     * 発注を複写して新規作成
+     */
+    async copyOrder(orderId) {
+      this.loading = true;
+      try {
+        const order = await GasApi.getOrderById(orderId);
+        if (!order) {
+          this.showToast('発注データが見つかりませんでした', 'error');
+          return;
+        }
+        const originalContent = order['注文内容'] || '';
+        this.selectedOrder = {
+          ...order,
+          '発注ID': '',
+          '注文内容': originalContent + '（複写）',
+          '支払ステータス(協力会社への)': '未発注',
+          '注文書発行日': '',
+          '注文書番号': '',
+          '注文協議書パス': '',
+          '注文書パス': '',
+          '返送された注文請書': ''
+        };
+        this.activeMenu = 'order';
+        this.showToast('発注を複写しました。内容を確認して保存してください。', 'success');
+      } catch (error) {
+        console.error('発注複写エラー:', error);
+        this.showToast('発注の複写に失敗しました', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
      * 契約協議書を選択して編集
      */
     async viewContract(contractId) {
@@ -14427,9 +14464,11 @@ const app = createApp({
         const contract = await GasApi.getContractById(contractId, 'solution');
         const today = new Date().toISOString().split('T')[0];
         // 元データをコピーし、ID・日付・承認系フィールドをリセット
+        const originalName = contract['工事名'] || '';
         this.selectedContract = {
           ...contract,
           '協議書ID': '',
+          '工事名': originalName + '（複写）',
           '作成日': today,
           '契約協議書日付': today,
           '作成者': this.currentUser?.name || '',
