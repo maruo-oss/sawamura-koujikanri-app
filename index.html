@@ -5597,67 +5597,40 @@ const ContractForm = {
                 <input type="text" v-model="form.creator" class="form-control" />
               </div>
             </div>
+          </div>
 
-            <div class="form-grid-3">
+          <div class="section">
+            <h3 class="section-title">発注者情報</h3>
+            <div class="form-grid-2">
               <div class="form-group" style="position: relative;">
-                <label class="form-label">営業担当者</label>
+                <label class="form-label required">発注者（顧客名）</label>
                 <input
                   type="text"
-                  v-model="salesManagerSearch"
-                  @input="onSalesManagerInput"
-                  @focus="onSalesManagerFocus"
-                  @blur="onSalesManagerBlur"
+                  v-model="customerSearchKeyword"
+                  @input="onCustomerInput"
+                  @blur="onCustomerBlur"
+                  @focus="onCustomerFocus"
                   class="form-control"
-                  placeholder="社員名を入力して検索"
+                  placeholder="顧客名を入力して検索"
                   autocomplete="off"
                 />
-                <ul v-if="showSalesManagerSuggestions && filteredSalesManagerEmployees.length > 0" class="suggestion-list">
-                  <li v-for="emp in filteredSalesManagerEmployees" :key="emp.employeeId" @mousedown="selectSalesManager(emp)" class="suggestion-item">
-                    <strong>{{ emp.employeeName }}</strong>
-                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
+                <ul v-if="showCustomerSuggestions && filteredContractCustomers.length > 0" class="suggestion-list">
+                  <li v-for="c in filteredContractCustomers" :key="c.customerId" @mousedown="selectCustomer(c)" class="suggestion-item">
+                    <strong>{{ c.customerName }}</strong>
+                    <span v-if="c.furigana" class="text-muted"> ({{ c.furigana }})</span>
+                  </li>
+                  <li v-if="filteredContractCustomers.length === 100" class="suggestion-item text-muted">
+                    100件以上の候補があります。絞り込んでください。
                   </li>
                 </ul>
               </div>
-              <div class="form-group" style="position: relative;">
-                <label class="form-label">工事担当者</label>
-                <input
-                  type="text"
-                  v-model="constructionManagerSearch"
-                  @input="onConstructionManagerInput"
-                  @focus="onConstructionManagerFocus"
-                  @blur="onConstructionManagerBlur"
-                  class="form-control"
-                  placeholder="社員名を入力して検索"
-                  autocomplete="off"
-                />
-                <ul v-if="showConstructionManagerSuggestions && filteredConstructionManagerEmployees.length > 0" class="suggestion-list">
-                  <li v-for="emp in filteredConstructionManagerEmployees" :key="emp.employeeId" @mousedown="selectConstructionManager(emp)" class="suggestion-item">
-                    <strong>{{ emp.employeeName }}</strong>
-                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
-                  </li>
-                </ul>
+              <div class="form-group">
+                <label class="form-label">電話番号</label>
+                <input type="tel" v-model="form.customerPhone" class="form-control" placeholder="電話番号を入力" />
               </div>
-            </div>
-
-            <div class="form-grid-3">
-              <div class="form-group" style="position: relative;">
-                <label class="form-label">設計担当者</label>
-                <input
-                  type="text"
-                  v-model="designManagerSearch"
-                  @input="onDesignManagerInput"
-                  @focus="onDesignManagerFocus"
-                  @blur="onDesignManagerBlur"
-                  class="form-control"
-                  placeholder="社員名を入力して検索"
-                  autocomplete="off"
-                />
-                <ul v-if="showDesignManagerSuggestions && filteredDesignManagerEmployees.length > 0" class="suggestion-list">
-                  <li v-for="emp in filteredDesignManagerEmployees" :key="emp.employeeId" @mousedown="selectDesignManager(emp)" class="suggestion-item">
-                    <strong>{{ emp.employeeName }}</strong>
-                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
-                  </li>
-                </ul>
+              <div class="form-group">
+                <label class="form-label">お客様のご担当者</label>
+                <input type="text" v-model="form.customerContact" class="form-control" placeholder="お客様側の担当者名を入力" />
               </div>
             </div>
           </div>
@@ -5697,37 +5670,64 @@ const ContractForm = {
           </div>
 
           <div class="section">
-            <h3 class="section-title">発注者情報</h3>
-            <div class="form-grid-2">
+            <h3 class="section-title">担当者情報</h3>
+            <div class="form-grid-3">
               <div class="form-group" style="position: relative;">
-                <label class="form-label required">発注者（顧客名）</label>
+                <label class="form-label">営業担当者</label>
                 <input
                   type="text"
-                  v-model="customerSearchKeyword"
-                  @input="onCustomerInput"
-                  @blur="onCustomerBlur"
-                  @focus="onCustomerFocus"
+                  v-model="salesManagerSearch"
+                  @input="onSalesManagerInput"
+                  @focus="onSalesManagerFocus"
+                  @blur="onSalesManagerBlur"
                   class="form-control"
-                  placeholder="顧客名を入力して検索"
+                  placeholder="社員名を入力して検索"
                   autocomplete="off"
                 />
-                <ul v-if="showCustomerSuggestions && filteredContractCustomers.length > 0" class="suggestion-list">
-                  <li v-for="c in filteredContractCustomers" :key="c.customerId" @mousedown="selectCustomer(c)" class="suggestion-item">
-                    <strong>{{ c.customerName }}</strong>
-                    <span v-if="c.furigana" class="text-muted"> ({{ c.furigana }})</span>
-                  </li>
-                  <li v-if="filteredContractCustomers.length === 100" class="suggestion-item text-muted">
-                    100件以上の候補があります。絞り込んでください。
+                <ul v-if="showSalesManagerSuggestions && filteredSalesManagerEmployees.length > 0" class="suggestion-list">
+                  <li v-for="emp in filteredSalesManagerEmployees" :key="emp.employeeId" @mousedown="selectSalesManager(emp)" class="suggestion-item">
+                    <strong>{{ emp.employeeName }}</strong>
+                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
                   </li>
                 </ul>
               </div>
-              <div class="form-group">
-                <label class="form-label">電話番号</label>
-                <input type="tel" v-model="form.customerPhone" class="form-control" placeholder="電話番号を入力" />
+              <div class="form-group" style="position: relative;">
+                <label class="form-label">工事担当者</label>
+                <input
+                  type="text"
+                  v-model="constructionManagerSearch"
+                  @input="onConstructionManagerInput"
+                  @focus="onConstructionManagerFocus"
+                  @blur="onConstructionManagerBlur"
+                  class="form-control"
+                  placeholder="社員名を入力して検索"
+                  autocomplete="off"
+                />
+                <ul v-if="showConstructionManagerSuggestions && filteredConstructionManagerEmployees.length > 0" class="suggestion-list">
+                  <li v-for="emp in filteredConstructionManagerEmployees" :key="emp.employeeId" @mousedown="selectConstructionManager(emp)" class="suggestion-item">
+                    <strong>{{ emp.employeeName }}</strong>
+                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
+                  </li>
+                </ul>
               </div>
-              <div class="form-group">
-                <label class="form-label">お客様のご担当者</label>
-                <input type="text" v-model="form.customerContact" class="form-control" placeholder="お客様側の担当者名を入力" />
+              <div class="form-group" style="position: relative;">
+                <label class="form-label">設計担当者</label>
+                <input
+                  type="text"
+                  v-model="designManagerSearch"
+                  @input="onDesignManagerInput"
+                  @focus="onDesignManagerFocus"
+                  @blur="onDesignManagerBlur"
+                  class="form-control"
+                  placeholder="社員名を入力して検索"
+                  autocomplete="off"
+                />
+                <ul v-if="showDesignManagerSuggestions && filteredDesignManagerEmployees.length > 0" class="suggestion-list">
+                  <li v-for="emp in filteredDesignManagerEmployees" :key="emp.employeeId" @mousedown="selectDesignManager(emp)" class="suggestion-item">
+                    <strong>{{ emp.employeeName }}</strong>
+                    <span class="text-muted" style="margin-left: 8px; font-size: 12px;">{{ emp.department || '' }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
