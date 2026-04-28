@@ -866,7 +866,7 @@ var CustomerRepository = {
       } catch (e) {
         return false;
       }
-    }).slice(0, 100);
+    });
   },
 
   save: function(data) {
@@ -947,7 +947,7 @@ var VendorRepository = {
 
   search: function(keyword) {
     var allData = this.findAll();
-    if (!keyword) return allData.slice(0, 100);
+    if (!keyword) return allData;
 
     return allData.filter(function(row) {
       try {
@@ -957,7 +957,7 @@ var VendorRepository = {
       } catch (e) {
         return false;
       }
-    }).slice(0, 100);
+    });
   },
 
   save: function(data) {

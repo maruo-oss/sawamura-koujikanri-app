@@ -1361,6 +1361,7 @@ html, body {
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
+  color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background: var(--bg-primary);
@@ -1371,6 +1372,17 @@ html, body {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* Chrome autofill による文字色グレー化を抑止（注文決定業者名等で発生していたため） */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-primary) inset !important;
+  caret-color: var(--text-primary);
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 .form-control:disabled,
@@ -13049,10 +13061,24 @@ const GasApi = {
   },
 
   /**
+   * 顧客一覧を取得（軽量版・サジェスト用）
+   */
+  getCustomersLight() {
+    return this.call('getCustomersLight');
+  },
+
+  /**
    * 協力会社一覧を取得
    */
   getVendors() {
     return this.call('getVendors');
+  },
+
+  /**
+   * 協力会社一覧を取得（軽量版・サジェスト用）
+   */
+  getVendorsLight() {
+    return this.call('getVendorsLight');
   },
 
   /**
@@ -13874,6 +13900,8 @@ const app = createApp({
 
       // キャッシュフラグ（プリフェッチ済みかどうか）
       _contractsLoaded: false,
+      _customersFullLoaded: false,
+      _vendorsFullLoaded: false,
       // 訪問済みメニュー（一度訪問したらコンポーネントをDOMに保持して高速化）
       // Vue 3はSetのリアクティビティを追跡しないため、オブジェクトで管理
       visitedMenus: { project: true },  // 初期画面は最初から訪問済み
@@ -14065,17 +14093,42 @@ const app = createApp({
     },
 
     /**
-     * マスタデータを読み込み
+     * マスタデータを読み込み（軽量版・サジェスト用）
+     * 詳細フィールドが必要な画面では loadCustomersFull() / loadVendorsFull() を呼ぶ
      */
     async loadMasters() {
       const [customers, vendors, employees] = await Promise.all([
-        GasApi.getCustomers(),
-        GasApi.getVendors(),
+        GasApi.getCustomersLight(),
+        GasApi.getVendorsLight(),
         GasApi.getEmployees()
       ]);
       this.customers = customers || [];
       this.vendors = vendors || [];
       this.employees = employees || [];
+      this._customersFullLoaded = false;
+      this._vendorsFullLoaded = false;
+    },
+
+    /**
+     * 顧客マスタをフル版で取得（マスタ画面用）
+     * 既にフル版がロード済みなら何もしない（force=true で強制再取得）
+     */
+    async loadCustomersFull(force = false) {
+      if (this._customersFullLoaded && !force) return;
+      const customers = await GasApi.getCustomers();
+      this.customers = customers || [];
+      this._customersFullLoaded = true;
+    },
+
+    /**
+     * 協力会社マスタをフル版で取得（マスタ画面用）
+     * 既にフル版がロード済みなら何もしない（force=true で強制再取得）
+     */
+    async loadVendorsFull(force = false) {
+      if (this._vendorsFullLoaded && !force) return;
+      const vendors = await GasApi.getVendors();
+      this.vendors = vendors || [];
+      this._vendorsFullLoaded = true;
     },
 
     /**
@@ -14214,6 +14267,11 @@ const app = createApp({
             this.loading = false;
           }
         }
+      }
+      // マスタ管理画面を開いた場合：軽量版で即表示しつつ、バックグラウンドでフル版に差し替え
+      if (menuId === 'master') {
+        this.loadCustomersFull().catch(e => console.warn('[App] 顧客フル取得失敗:', e));
+        this.loadVendorsFull().catch(e => console.warn('[App] 協力会社フル取得失敗:', e));
       }
     },
 
@@ -14893,7 +14951,7 @@ const app = createApp({
           this.showToast('保存に失敗しました: ' + (result.error || '不明なエラー'), 'error');
           return;
         }
-        await this.loadMasters();
+        await this.loadCustomersFull(true);
         this.showToast('保存しました', 'success');
       } catch (error) {
         console.error('顧客保存エラー:', error);
@@ -14908,7 +14966,7 @@ const app = createApp({
           this.showToast('保存に失敗しました: ' + (result.error || '不明なエラー'), 'error');
           return;
         }
-        await this.loadMasters();
+        await this.loadVendorsFull(true);
         this.showToast('保存しました', 'success');
       } catch (error) {
         console.error('協力会社保存エラー:', error);

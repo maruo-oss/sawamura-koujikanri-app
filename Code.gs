@@ -873,8 +873,8 @@ function initializeApp() {
     var customers = [];
     var vendors = [];
     var employees = [];
-    try { customers = getCustomers(); } catch (e) { Logger.log('initializeApp - 顧客取得エラー: ' + e.message); }
-    try { vendors = getVendors(); } catch (e) { Logger.log('initializeApp - 協力会社取得エラー: ' + e.message); }
+    try { customers = getCustomersLight(); } catch (e) { Logger.log('initializeApp - 顧客取得エラー: ' + e.message); }
+    try { vendors = getVendorsLight(); } catch (e) { Logger.log('initializeApp - 協力会社取得エラー: ' + e.message); }
     try { employees = getEmployees(); } catch (e) { Logger.log('initializeApp - 社員取得エラー: ' + e.message); }
 
     return {
@@ -2681,6 +2681,27 @@ function getCustomers(keyword) {
 }
 
 /**
+ * 顧客マスタ（軽量版）
+ * サジェスト・選択肢用に最小限のフィールドのみ返す。
+ * 詳細フィールドが必要な場合は getCustomers() を使う。
+ */
+function getCustomersLight() {
+  try {
+    var rows = CustomerRepository.findAll();
+    return rows.map(function(r) {
+      return {
+        customerId: String(r['顧客ID'] || ''),
+        customerName: String(r['顧客名'] || ''),
+        furigana: String(r['ふりがな'] || '')
+      };
+    });
+  } catch (e) {
+    Logger.log('getCustomersLight エラー: ' + e.message);
+    return [];
+  }
+}
+
+/**
  * 顧客を保存
  */
 function saveCustomer(data) {
@@ -2718,6 +2739,29 @@ function getVendors(keyword) {
     });
   } catch (e) {
     Logger.log('協力会社取得エラー: ' + e.message);
+    return [];
+  }
+}
+
+/**
+ * 協力会社マスタ（軽量版）
+ * サジェスト・選択肢用に最小限のフィールドのみ返す。
+ * 詳細フィールドが必要な場合は getVendorById() / getVendors() を使う。
+ */
+function getVendorsLight() {
+  try {
+    var rows = VendorRepository.findAll();
+    return rows.map(function(r) {
+      return {
+        vendorId: String(r['仕入先コード'] || ''),
+        vendorName: String(r['会社名'] || ''),
+        shortName: String(r['略称'] || ''),
+        kana: String(r['カナ'] || ''),
+        vendorRank: String(r['業者ランク'] || '')
+      };
+    });
+  } catch (e) {
+    Logger.log('getVendorsLight エラー: ' + e.message);
     return [];
   }
 }
