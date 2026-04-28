@@ -2133,7 +2133,7 @@ select.form-control {
         <schedule-management v-if="visitedMenus.schedule" v-show="activeMenu === 'schedule'" :current-user="currentUser" @show-toast="showToast"></schedule-management>
         <!-- 詳細/フォーム画面: 毎回異なるデータを表示するため v-if のまま -->
         <project-detail-view v-if="activeMenu === 'projectDetail'" :project="selectedProject" :constructions="projectConstructions" :orders="projectOrders" :employees="employees" :initial-tab="initialProjectTab" @back="backToProjectList" @delete-project="deleteProjectAndBack" @save-construction="saveProjectConstruction" @delete-construction="onDeleteConstruction" @view-order="viewOrder" @new-order="newOrderForProject" @copy-order="copyOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @show-toast="showToast"></project-detail-view>
-        <contract-form v-if="activeMenu === 'contractForm'" :contract="selectedContract" :customers="customers" :employees="employees" :current-user="currentUser" :all-contracts="contracts" @save="saveContract" @back="backToContractList" @delete="deleteContractAndBack" @export-excel="exportContractExcel" @export-excel-small="exportContractExcelSmall" @export-pdf="exportContractPdf" @show-toast="showToast" @copy-contract="copyContract"></contract-form>
+        <contract-form v-if="activeMenu === 'contractForm'" :contract="selectedContract" :customers="customers" :employees="employees" :current-user="currentUser" :all-contracts="contracts" @save="saveContract" @back="backToContractList" @delete="deleteContractAndBack" @export-excel="exportContractExcel" @export-excel-small="exportContractExcelSmall" @export-pdf="exportContractPdf" @export-pdf-small="exportContractPdfSmall" @show-toast="showToast" @copy-contract="copyContract"></contract-form>
         <order-form v-if="activeMenu === 'order'" :order="selectedOrder" :vendors="vendors" :current-user="currentUser" @save="saveOrder" @export-agreement="exportOrder" @export-order="issueOrderSheet" @copy-order="copyOrder" @back="backToProjectDetail" @show-toast="showToast"></order-form>
       </main>
     </div>
@@ -4786,7 +4786,7 @@ const ContractForm = {
     }
   },
 
-  emits: ['save', 'back', 'delete', 'export-excel', 'export-excel-small', 'export-pdf', 'show-toast', 'copy-contract'],
+  emits: ['save', 'back', 'delete', 'export-excel', 'export-excel-small', 'export-pdf', 'export-pdf-small', 'show-toast', 'copy-contract'],
 
   data() {
     return {
@@ -5511,6 +5511,13 @@ const ContractForm = {
     },
 
     /**
+     * 小口用PDF出力
+     */
+    onExportPdfSmall() {
+      this.$emit('export-pdf-small', this.form.contractId);
+    },
+
+    /**
      * 削除
      */
     onDelete() {
@@ -5552,6 +5559,12 @@ const ContractForm = {
             </button>
             <button class="btn btn-primary" @click="onExportExcelSmall" :disabled="!form.contractId" style="display: flex; align-items: center; gap: 6px; background-color: #0d47a1;">
               <span style="font-size: 16px;">📋</span> 小口用出力
+            </button>
+            <button class="btn btn-primary" @click="onExportPdf" :disabled="!form.contractId" style="display: flex; align-items: center; gap: 6px; background-color: #c62828;">
+              <span style="font-size: 16px;">📕</span> 大工事用PDF出力
+            </button>
+            <button class="btn btn-primary" @click="onExportPdfSmall" :disabled="!form.contractId" style="display: flex; align-items: center; gap: 6px; background-color: #ad1457;">
+              <span style="font-size: 16px;">📘</span> 小口用PDF出力
             </button>
             <button v-if="form.contractId" class="btn btn-secondary btn-sm" @click="$emit('copy-contract', form.contractId)" style="display: flex; align-items: center; gap: 4px;">
               複写して新規作成
@@ -12925,6 +12938,14 @@ const GasApi = {
   },
 
   /**
+   * 契約協議書（小口用）をPDF出力
+   * @param {string} contractId - 契約協議ID
+   */
+  exportContractSmallToPdf(contractId) {
+    return this.call('exportContractSmallToPdf', contractId);
+  },
+
+  /**
    * 承認済契約協議書一覧を取得（工事登録用）
    * 承認済の契約協議書から工事を作成する際に使用
    * @param {string} department - 部署名（省略時は両方）
@@ -14822,6 +14843,28 @@ const app = createApp({
       } catch (error) {
         console.error('PDF出力エラー:', error);
         this.showToast('PDF出力に失敗しました', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * 契約協議書（小口用）をPDF出力
+     */
+    async exportContractPdfSmall(contractId) {
+      this.loading = true;
+      try {
+        const departmentName = 'ソリューション事業部';
+        const result = await GasApi.exportContractSmallToPdf(contractId, departmentName);
+        if (result?.success && result?.fileId) {
+          this.showPreviewModal('契約協議書・小口用（PDF）', result.fileId, result.url, result.filename);
+          this.showToast('小口用PDFファイルを生成しました', 'success');
+        } else {
+          this.showToast(result?.error || '小口用PDF出力に失敗しました', 'error');
+        }
+      } catch (error) {
+        console.error('小口用PDF出力エラー:', error);
+        this.showToast('小口用PDF出力に失敗しました', 'error');
       } finally {
         this.loading = false;
       }

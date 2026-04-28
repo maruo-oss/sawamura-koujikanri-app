@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工事管理システム ユーザーマニュアル</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1565c0;
+      --primary-dark: #0d47a1;
+      --accent: #c62828;
+      --accent-soft: #ad1457;
+      --text: #1f2937;
+      --text-soft: #4b5563;
+      --bg: #f7f8fa;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+      --highlight: #fff8e1;
+      --code-bg: #f1f3f5;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      max-width: 1200px;
+      margin: 0 auto;
+      gap: 32px;
+      padding: 24px;
+    }
+    nav.sidebar {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      font-size: 13.5px;
+    }
+    nav.sidebar h2 {
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      color: var(--text-soft);
+      margin: 0 0 12px;
+      text-transform: uppercase;
+    }
+    nav.sidebar ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      counter-reset: section;
+    }
+    nav.sidebar li {
+      counter-increment: section;
+      margin: 4px 0;
+    }
+    nav.sidebar a {
+      color: var(--text-soft);
+      text-decoration: none;
+      display: block;
+      padding: 6px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    nav.sidebar a::before {
+      content: counter(section) ". ";
+      color: var(--primary);
+      font-weight: 700;
+      margin-right: 4px;
+    }
+    nav.sidebar a:hover { background: var(--bg); color: var(--primary-dark); }
+    nav.sidebar .sub {
+      list-style: none;
+      padding-left: 18px;
+      margin: 2px 0;
+    }
+    nav.sidebar .sub a::before { content: ""; }
+    nav.sidebar .sub a { font-size: 12.5px; padding: 4px 8px; }
+
+    main { min-width: 0; }
+    header.hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      padding: 36px 32px;
+      border-radius: 16px;
+      margin-bottom: 32px;
+      box-shadow: 0 4px 12px rgba(13,71,161,.15);
+    }
+    header.hero h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    header.hero p {
+      margin: 0;
+      opacity: 0.92;
+      font-size: 15px;
+      max-width: 720px;
+    }
+
+    section.card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin: 0 0 24px;
+    }
+    h2.section-title {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 0 0 18px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary);
+      font-size: 21px;
+      color: var(--primary-dark);
+    }
+    h2.section-title .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 14px;
+    }
+    h3 {
+      font-size: 16.5px;
+      color: var(--primary-dark);
+      margin: 22px 0 10px;
+      padding-left: 10px;
+      border-left: 4px solid var(--primary);
+    }
+    h4 {
+      font-size: 14.5px;
+      margin: 16px 0 6px;
+      color: var(--text);
+    }
+    p { margin: 8px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--bg); font-weight: 700; color: var(--text-soft); }
+    code {
+      background: var(--code-bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
+      color: var(--accent);
+    }
+    pre {
+      background: #263238;
+      color: #eceff1;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+
+    .callout {
+      border-left: 4px solid var(--primary);
+      background: #e3f2fd;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 14px 0;
+    }
+    .callout.warn { border-color: #f9a825; background: #fff8e1; }
+    .callout.danger { border-color: var(--accent); background: #ffebee; }
+    .callout.success { border-color: #2e7d32; background: #e8f5e9; }
+    .callout strong { display: block; margin-bottom: 4px; }
+
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    .badge.new { background: var(--accent); color: #fff; }
+    .badge.role { background: var(--primary); color: #fff; }
+    .badge.gray { background: #cfd8dc; color: #455a64; }
+
+    .step-list {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+    }
+    .step-list > li {
+      counter-increment: step;
+      position: relative;
+      padding: 10px 14px 10px 48px;
+      margin: 8px 0;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+    .step-list > li::before {
+      content: counter(step);
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 26px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .feature-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .feature-card h4 {
+      margin: 0 0 6px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feature-card p {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--text-soft);
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-soft);
+      font-size: 12.5px;
+      padding: 24px 0 12px;
+    }
+
+    @media (max-width: 880px) {
+      .layout { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+      nav.sidebar { position: static; max-height: none; }
+      header.hero { padding: 24px 20px; }
+      header.hero h1 { font-size: 22px; }
+      section.card { padding: 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="目次">
+      <h2>目次</h2>
+      <ol>
+        <li><a href="#overview">システム概要</a></li>
+        <li><a href="#login">ログインと権限</a></li>
+        <li><a href="#flow">業務全体の流れ</a></li>
+        <li><a href="#projects">案件・工事管理</a></li>
+        <li><a href="#contract">契約協議書</a>
+          <ul class="sub">
+            <li><a href="#contract-create">作成と承認</a></li>
+            <li><a href="#contract-export">Excel/PDF出力（枝番付き）</a></li>
+          </ul>
+        </li>
+        <li><a href="#orders">発注管理</a></li>
+        <li><a href="#billing">請求・入金</a></li>
+        <li><a href="#payments">支払管理</a></li>
+        <li><a href="#ledger">工事台帳</a></li>
+        <li><a href="#budget">実行予算</a></li>
+        <li><a href="#schedule">スケジュール</a></li>
+        <li><a href="#summary">決算集計</a></li>
+        <li><a href="#masters">マスタ管理</a></li>
+        <li><a href="#utility">CSV / アーカイブ / 履歴</a></li>
+        <li><a href="#faq">よくある質問</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <h1>工事管理システム ユーザーマニュアル</h1>
+        <p>本マニュアルでは、Google Apps Script で構築された建設業向け工事管理Webアプリの「できること」と「使い方」を画面別にまとめています。日々の業務でつまづいた際のリファレンスとしてご活用ください。</p>
+      </header>
+
+      <!-- 1. システム概要 -->
+      <section class="card" id="overview">
+        <h2 class="section-title"><span class="num">1</span>システム概要</h2>
+        <p>
+          本アプリは、案件の発生から契約・発注・請求・支払まで、工事業務に関わる一連のデータを一元管理するためのWebアプリケーションです。
+          データの保存先は Google スプレッドシートで、出力ドキュメントは Google ドライブに自動保存されます。
+        </p>
+
+        <h3>このシステムでできること</h3>
+        <div class="feature-grid">
+          <div class="feature-card"><h4>📁 案件・工事の管理</h4><p>案件の登録から進捗追跡、論理削除、ステータス別の集計まで対応。</p></div>
+          <div class="feature-card"><h4>📝 契約協議書</h4><p>作成・承認フローに加え、Excel/PDF出力（枝番自動採番）に対応。</p></div>
+          <div class="feature-card"><h4>📦 発注・見積</h4><p>明細の複数行管理、注文書/注文協議書の自動生成。</p></div>
+          <div class="feature-card"><h4>💰 請求・入金・支払</h4><p>請求書発行、入金履歴、支払承認・実行記録、手形比率自動適用。</p></div>
+          <div class="feature-card"><h4>📊 決算集計・予算</h4><p>月次・期別の集計、案件別実行予算の実績管理。</p></div>
+          <div class="feature-card"><h4>📅 スケジュール</h4><p>ガントチャート、マイルストーン、カレンダーで進捗を可視化。</p></div>
+          <div class="feature-card"><h4>🏢 マスタ管理</h4><p>顧客・協力会社・社員のマスタ管理（軽量APIで100件超もOK）。</p></div>
+          <div class="feature-card"><h4>🛠 運用支援</h4><p>CSV取込、アーカイブ復元、操作履歴、添付ファイル連携。</p></div>
+        </div>
+
+        <h3>用語</h3>
+        <table>
+          <tr><th>用語</th><th>意味</th></tr>
+          <tr><td>案件</td><td>引合・商談から契約に至るまでの単位。</td></tr>
+          <tr><td>工事</td><td>契約後に発生する実際の施工単位。1案件に複数工事がぶら下がることもある。</td></tr>
+          <tr><td>契約協議書</td><td>顧客との契約条件をまとめた社内向け書類。承認を経て案件・工事が登録される。</td></tr>
+          <tr><td>期</td><td>1期 = 1951年度。10月1日に切替（例: 2026年2月 → 75期）。</td></tr>
+          <tr><td>枝番</td><td>同日内に発行したPDFを区別するための連番。例: <code>20260428-1</code>。</td></tr>
+        </table>
+      </section>
+
+      <!-- 2. ログインと権限 -->
+      <section class="card" id="login">
+        <h2 class="section-title"><span class="num">2</span>ログインと権限</h2>
+        <p>WebアプリのURLにアクセスすると、Googleアカウントで自動認証されます。社員マスタに登録されているメールアドレスと一致したアカウントでのみ操作可能です。</p>
+
+        <h3>ロール一覧</h3>
+        <table>
+          <tr><th>ロール</th><th>レベル</th><th>できること</th></tr>
+          <tr><td><span class="badge role">readonly</span></td><td>1</td><td>各画面の閲覧のみ。データの作成・編集はできません。</td></tr>
+          <tr><td><span class="badge role">staff</span></td><td>2</td><td>自部門の案件・契約・発注などのCRUD操作。</td></tr>
+          <tr><td><span class="badge role">manager</span></td><td>3</td><td>承認権限、削除権限、アーカイブ管理。</td></tr>
+          <tr><td><span class="badge role">admin</span></td><td>4</td><td>マスタ管理、完全削除、すべての機能。</td></tr>
+        </table>
+
+        <div class="callout">
+          <strong>ヒント</strong>
+          画面右上のユーザー名の横にロールが表示されます。ボタンが押せない / 入力欄がグレー化している場合はロール不足の可能性があります。
+        </div>
+      </section>
+
+      <!-- 3. 業務の流れ -->
+      <section class="card" id="flow">
+        <h2 class="section-title"><span class="num">3</span>業務全体の流れ</h2>
+        <p>本システムは、以下のような大きな流れで業務データが連結されていきます。</p>
+
+        <ol class="step-list">
+          <li><strong>案件登録</strong>：引合や商談が発生したら「案件管理」で新規作成。</li>
+          <li><strong>契約協議書作成・承認</strong>：契約条件を入力し、上長が承認。承認後は編集ロックがかかります。</li>
+          <li><strong>工事登録</strong>：承認済の契約協議書から工事を自動登録。追加工事にも対応。</li>
+          <li><strong>発注</strong>：協力会社への発注情報を登録し、必要に応じて注文協議書 / 注文書を出力。</li>
+          <li><strong>請求 / 入金</strong>：顧客への請求書を発行し、入金状況を記録。</li>
+          <li><strong>支払</strong>：協力会社への支払を作成・承認・実行。手形比率は協力会社マスタから自動適用。</li>
+          <li><strong>工事台帳・決算</strong>：工事台帳に契約・発注・請求・支払・予算が集約され、月次/期別で集計。</li>
+        </ol>
+      </section>
+
+      <!-- 4. 案件・工事管理 -->
+      <section class="card" id="projects">
+        <h2 class="section-title"><span class="num">4</span>案件・工事管理</h2>
+
+        <h3>案件管理</h3>
+        <p>商談中の案件から契約済の案件まで、ステータスごとに切替えて確認できます。</p>
+        <ul>
+          <li>一覧画面のフィルタで「進行中 / 商談中 / 契約済 / 完了」を切替</li>
+          <li>「+ 新規作成」から案件を登録</li>
+          <li>削除は<strong>論理削除</strong>で行われ、配下の工事・契約・発注などにカスケード反映</li>
+          <li>削除した案件はアーカイブ画面から復元可能</li>
+        </ul>
+
+        <h3>工事管理</h3>
+        <p>契約済の案件にひも付く施工単位として工事を管理します。進捗率の更新やロック（編集禁止）も可能です。</p>
+      </section>
+
+      <!-- 5. 契約協議書 -->
+      <section class="card" id="contract">
+        <h2 class="section-title"><span class="num">5</span>契約協議書</h2>
+
+        <h3 id="contract-create">作成と承認</h3>
+        <p>契約協議書フォームは「基本情報 → 発注者情報 → 工事情報 → 担当者情報」の順に上から下へ入力する導線になっています。承認済になると編集ロックがかかり、画面上部に黄色いバナーが表示されます。</p>
+
+        <ol class="step-list">
+          <li>左メニューから「契約協議書」を開き「+ 新規作成」をクリック</li>
+          <li>各タブを上から順に入力（顧客住所は顧客マスタから自動取得）</li>
+          <li>必要なら「複写して新規作成」で既存契約をベースに新規作成（複写であることが分かるよう「（複写）」表示が付与されます）</li>
+          <li>保存後、上長が「承認」操作。承認以降は編集不可になり、案件・工事の自動登録が可能になります</li>
+        </ol>
+
+        <h3 id="contract-export">Excel / PDF 出力（枝番付き）</h3>
+        <p>契約フォーム右上の出力ボタンから、テンプレートに値を埋め込んだExcel / PDFを生成し、Driveの所定フォルダに保存できます。</p>
+
+        <table>
+          <tr><th>ボタン</th><th>出力</th><th>形式</th><th>枝番スタンプ</th></tr>
+          <tr><td>📄 大工事用出力</td><td>大工事（ソリューション）テンプレート</td><td>Excel (.xlsx)</td><td>—</td></tr>
+          <tr><td>📋 小口用出力</td><td>小口契約テンプレート</td><td>Excel (.xlsx)</td><td>—</td></tr>
+          <tr><td>📕 大工事用PDF出力 <span class="badge new">NEW</span></td><td>大工事（ソリューション）テンプレート</td><td>PDF</td><td>あり（右上）</td></tr>
+          <tr><td>📘 小口用PDF出力 <span class="badge new">NEW</span></td><td>小口契約テンプレート</td><td>PDF</td><td>あり（右上）</td></tr>
+        </table>
+
+        <h4>枝番（出力番号）の仕様</h4>
+        <ul>
+          <li>形式：<code>YYYYMMDD-N</code>（例：<code>20260428-1</code>）</li>
+          <li>当日 1番目に出力した契約から順に <code>-1</code>, <code>-2</code>, <code>-3</code>... と採番</li>
+          <li>同じ契約協議書を同日に再出力した場合は<strong>同じ枝番をそのまま再利用</strong>（番号は増えません）</li>
+          <li>別契約を当日中に出力すると <code>+1</code> で発番</li>
+          <li>翌日になると <code>-1</code> から再スタート</li>
+          <li>同時押下による重複発番は <code>LockService</code> で防止</li>
+        </ul>
+
+        <h4>発番の履歴</h4>
+        <p>発番状況はスプレッドシート内の「<strong>PDF出力履歴</strong>」シートに自動記録されます（初回出力時に自動作成）。各行には次の項目が保存されます。</p>
+        <ul>
+          <li>出力日付 / 部署 / 契約ID / 枝番 / 出力番号</li>
+          <li>初回出力日時 / 最終出力日時 / 出力回数</li>
+          <li>最終ファイル名</li>
+        </ul>
+
+        <div class="callout warn">
+          <strong>テンプレート側の準備（管理者向け・1回だけの初期設定）</strong>
+          PDFの右上に枝番が印字されるためには、Google Drive上のテンプレートに <code>&lt;&lt;[出力番号]&gt;&gt;</code> というプレースホルダーセルを「印刷領域の1ページ目右上」に置く必要があります。<br>
+          対象テンプレート：大工事用 / 小口用 の両方<br>
+          フォントサイズや右寄せはテンプレート側のセル書式で調整してください。
+        </div>
+
+        <div class="callout">
+          <strong>右上に何も出ない場合</strong>
+          <ol>
+            <li>テンプレートのセルに <code>&lt;&lt;[出力番号]&gt;&gt;</code> が入っているか確認（記号は半角）</li>
+            <li>印刷プレビューで該当セルが1ページ目の右上領域に入っているか確認</li>
+            <li>「PDF出力履歴」シートに行が追加されているか確認（追加されていれば発番ロジックは動作中）</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 6. 発注管理 -->
+      <section class="card" id="orders">
+        <h2 class="section-title"><span class="num">6</span>発注管理</h2>
+        <p>協力会社への発注を作成・編集します。複数明細の見積もりや、注文書 / 注文協議書のドキュメント出力にも対応しています。</p>
+        <ul>
+          <li>発注フォームから複数の見積明細を一括登録</li>
+          <li>注文協議書（社内回覧用）と注文書（社外提出用）を Google ドキュメントテンプレートから生成</li>
+          <li>「複写」機能で既存発注を雛形に新規作成可（複写時は「（複写）」表示）</li>
+          <li>発注確定時に支払データを自動生成（支払条件は協力会社マスタの手形比率・サイトを参照）</li>
+        </ul>
+      </section>
+
+      <!-- 7. 請求・入金 -->
+      <section class="card" id="billing">
+        <h2 class="section-title"><span class="num">7</span>請求・入金</h2>
+        <p>顧客への請求書発行と、入金履歴の管理を行います。</p>
+        <ul>
+          <li>案件・工事を選択して請求書を作成</li>
+          <li>ステータス：<span class="badge gray">下書き</span> → <span class="badge gray">発行済</span> → <span class="badge gray">入金済</span></li>
+          <li>入金履歴は1請求に対して複数件記録可能（分割入金対応）</li>
+        </ul>
+      </section>
+
+      <!-- 8. 支払管理 -->
+      <section class="card" id="payments">
+        <h2 class="section-title"><span class="num">8</span>支払管理</h2>
+        <p>協力会社への支払を作成・承認・実行する画面です。</p>
+        <ul>
+          <li>発注確定時に自動生成された支払データを編集・確定</li>
+          <li>承認フロー：<span class="badge gray">作成</span> → <span class="badge gray">承認待ち</span> → <span class="badge gray">承認済</span> → <span class="badge gray">支払実行</span></li>
+          <li>手形比率・サイト等は協力会社マスタから自動適用</li>
+          <li>支払履歴を一覧で確認可能</li>
+        </ul>
+      </section>
+
+      <!-- 9. 工事台帳 -->
+      <section class="card" id="ledger">
+        <h2 class="section-title"><span class="num">9</span>工事台帳</h2>
+        <p>工事1件ごとに、契約・発注・請求・支払・予算データを集約表示します。完了工事の振り返りや原価分析に利用します。</p>
+        <ul>
+          <li>工事ごとのステータス管理（着工前 / 進行中 / 完了 など）</li>
+          <li>関連する契約・発注・請求・支払が1画面に集約</li>
+          <li>予算と実績の差異を確認可能</li>
+        </ul>
+      </section>
+
+      <!-- 10. 実行予算 -->
+      <section class="card" id="budget">
+        <h2 class="section-title"><span class="num">10</span>実行予算</h2>
+        <p>案件・工事ごとの予算を登録し、実績（発注・請求・支払）との差異を集計します。</p>
+        <ul>
+          <li>大科目 / 中科目 / 小科目の階層で予算を入力</li>
+          <li>実績は発注・請求・支払シートから自動集計</li>
+          <li>計画と実績の対比で着地予測を確認</li>
+        </ul>
+      </section>
+
+      <!-- 11. スケジュール -->
+      <section class="card" id="schedule">
+        <h2 class="section-title"><span class="num">11</span>スケジュール</h2>
+        <h3>ガントチャート</h3>
+        <p>工事の開始日 / 完工日をバーで表示。進捗状況をひと目で把握できます。</p>
+
+        <h3>マイルストーン管理</h3>
+        <ul>
+          <li>予定日と実績日を別々に入力</li>
+          <li>予定日を過ぎても実績が未登録の場合は<strong>遅延として自動検知</strong></li>
+        </ul>
+
+        <h3>カレンダー</h3>
+        <p>契約期日や工事の開始 / 完了日を月単位のカレンダーに表示します。</p>
+      </section>
+
+      <!-- 12. 決算集計 -->
+      <section class="card" id="summary">
+        <h2 class="section-title"><span class="num">12</span>決算集計</h2>
+        <p>月次・期別の集計を一覧で確認できます。</p>
+        <ul>
+          <li>期は10月始まり（1期 = 1951年度）</li>
+          <li>月別集計は1ヶ月ごとの請求・支払・粗利を表示</li>
+          <li>期別集計は12ヶ月分の累計を表示</li>
+        </ul>
+      </section>
+
+      <!-- 13. マスタ管理 -->
+      <section class="card" id="masters">
+        <h2 class="section-title"><span class="num">13</span>マスタ管理</h2>
+        <p><span class="badge role">admin</span> ロールのみアクセス可能です。</p>
+
+        <h3>顧客マスタ</h3>
+        <ul>
+          <li>顧客の基本情報（住所・連絡先など）</li>
+          <li>契約協議書の発注者欄に住所を自動反映</li>
+        </ul>
+
+        <h3>協力会社マスタ</h3>
+        <ul>
+          <li>協力会社情報＋支払条件（手形比率・サイト）</li>
+          <li>発注時に自動的に支払条件が適用される</li>
+        </ul>
+
+        <h3>社員マスタ</h3>
+        <ul>
+          <li>社員のメールアドレスとロールを管理</li>
+          <li>このシートに登録された社員のみアプリにアクセス可</li>
+        </ul>
+
+        <div class="callout success">
+          <strong>軽量API + 遅延ロード方式</strong>
+          顧客・協力会社マスタが100件を超えても全件表示・検索できるよう、初期表示は軽量API、マスタ画面に入った瞬間にバックグラウンドでフルデータを取得する設計になっています。100件目以降が出ない事象は解消済みです。
+        </div>
+      </section>
+
+      <!-- 14. CSV / アーカイブ / 履歴 -->
+      <section class="card" id="utility">
+        <h2 class="section-title"><span class="num">14</span>CSV / アーカイブ / 操作履歴</h2>
+
+        <h3>CSVインポート</h3>
+        <p>各シートに対してCSVから一括取込ができます。ヘッダ行をシートのカラム名と一致させてください。</p>
+
+        <h3>アーカイブ</h3>
+        <p>論理削除されたデータの一覧です。<span class="badge role">manager</span> 以上で「復元」または「完全削除」が可能です。</p>
+
+        <h3>操作履歴（監査ログ）</h3>
+        <p>主要な操作（作成・編集・削除・承認・出力など）が「監査ログ」シートに自動記録されます。トラブル時の調査や改善にご活用ください。</p>
+
+        <h3>添付ファイル</h3>
+        <p>各レコードにGoogle Drive上のファイルを添付できます。プレビューはモーダルで開き、PDF・画像はその場で閲覧可能です。</p>
+      </section>
+
+      <!-- 15. FAQ -->
+      <section class="card" id="faq">
+        <h2 class="section-title"><span class="num">15</span>よくある質問</h2>
+
+        <h3>Q. PDFの右上に枝番が出ません</h3>
+        <p>A. テンプレート側にプレースホルダーが入っていない可能性が最も高いです。<a href="#contract-export">契約協議書のExcel/PDF出力セクション</a>の手順で <code>&lt;&lt;[出力番号]&gt;&gt;</code> セルがあるか確認してください。</p>
+
+        <h3>Q. 同日に同じ契約をPDF出力したら枝番が増える？</h3>
+        <p>A. 増えません。契約協議書ごとに当日初出力時に確定し、再出力では同じ番号が付きます。別契約を出力すると <code>+1</code> 採番されます。</p>
+
+        <h3>Q. 「協力会社マスタで業者が見つからない」</h3>
+        <p>A. 旧来の100件制限は撤廃済みです。それでも見つからない場合はマスタ管理画面で実在を確認してください。サジェストは入力中の文字でフィルタされます。</p>
+
+        <h3>Q. 削除したデータを戻したい</h3>
+        <p>A. <span class="badge role">manager</span> 以上のロールでアーカイブ画面から「復元」してください。完全削除されたデータは戻せません。</p>
+
+        <h3>Q. 入力欄の文字色が薄い（autofill問題）</h3>
+        <p>A. 修正済みです（Chrome の autofill 状態でも標準色で表示されます）。表示が崩れている場合はキャッシュクリアやハードリロードをお試しください。</p>
+
+        <h3>Q. ボタンが押せない / 入力欄がグレーアウト</h3>
+        <p>A. ロール不足、または契約協議書が承認済みのため編集ロックがかかっている可能性があります。画面上部のバナーやロール表示を確認してください。</p>
+      </section>
+
+      <footer>
+        工事管理システム ユーザーマニュアル / 最終更新日: 2026-04-28
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

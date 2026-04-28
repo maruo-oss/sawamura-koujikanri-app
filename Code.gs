@@ -1992,13 +1992,19 @@ function exportContractToPdf(contractId, department) {
     // 3. 関連データを取得してマージ
     var enrichedData = enrichContractDataForDocument(contract, department);
 
+    // 3.5. 出力番号(枝番)を発番してテンプレートに渡す
+    var seq = getOrIssuePdfSequenceNo(contractId, department);
+    enrichedData['出力番号'] = seq.出力番号;
+    enrichedData['出力日付_yyyyMMdd'] = seq.出力日付;
+    enrichedData['出力枝番'] = String(seq.枝番);
+
     // 4. テンプレートの種類を判別
     var templateFile = DriveApp.getFileById(templateId);
     var mimeType = templateFile.getMimeType();
 
-    // 5. ファイル名を生成
+    // 5. ファイル名を生成（出力番号を含める）
     var projectName = contract['工事名'] || contractId;
-    var pdfFileName = generateFileName('【契約】', projectName, 'pdf');
+    var pdfFileName = generateFileName('【契約】', projectName + '_' + seq.出力番号, 'pdf');
 
     var downloadUrl;
     var fileId;
@@ -2029,14 +2035,85 @@ function exportContractToPdf(contractId, department) {
       fileId = pdfFile.getId();
     }
 
+    // 履歴シートにファイル名を記録
+    updatePdfExportLogFileName(seq, pdfFileName);
+
     return {
       success: true,
       url: downloadUrl,
       filename: pdfFileName,
-      fileId: fileId
+      fileId: fileId,
+      outputNo: seq.出力番号
     };
   } catch (e) {
     Logger.log('契約協議書PDF出力エラー: ' + e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * 契約協議書（小口用）をPDF出力
+ * 1ページ目右上に「出力日付-枝番」を印字（テンプレートに <<[出力番号]>> プレースホルダー必要）
+ * @param {string} contractId - 契約協議書ID
+ * @param {string} department - 部署
+ * @returns {Object} 結果オブジェクト {success, url, filename, fileId, outputNo, error}
+ */
+function exportContractSmallToPdf(contractId, department) {
+  try {
+    var templateId = OUTPUT_CONFIG.TEMPLATE_CONTRACT_SMALL;
+    if (!templateId) {
+      return { success: false, error: '小口用テンプレートファイルIDが設定されていません。' };
+    }
+
+    var contract = getContractById(contractId, department);
+    if (!contract) {
+      return { success: false, error: '契約協議が見つかりません: ' + contractId };
+    }
+
+    // 関連データを取得 + 小口用の追加フィールドを生成
+    var enrichedData = enrichContractDataForDocument(contract, department);
+    enrichSmallContractData(enrichedData, contract);
+
+    // 出力番号(枝番)を発番
+    var seq = getOrIssuePdfSequenceNo(contractId, department);
+    enrichedData['出力番号'] = seq.出力番号;
+    enrichedData['出力日付_yyyyMMdd'] = seq.出力日付;
+    enrichedData['出力枝番'] = String(seq.枝番);
+
+    var projectName = contract['工事名'] || contractId;
+    var pdfFileName = generateFileName('【小口契約】', projectName + '_' + seq.出力番号, 'pdf');
+
+    // テンプレートをコピーしてプレースホルダー置換
+    var spreadsheet = copyTemplateAndFillAuto(
+      templateId,
+      enrichedData,
+      pdfFileName.replace('.pdf', ''),
+      OUTPUT_CONFIG.OUTPUT_FOLDER_ID
+    );
+
+    // 工事施工協議書シート: 工事場所の結合セル補正（小口Excel版と同じ処理）
+    var sekouSheet = spreadsheet.getSheetByName('工事施工協議書');
+    if (sekouSheet) {
+      sekouSheet.getRange('D13:N15').breakApart();
+      sekouSheet.getRange('D13:N15').merge();
+      sekouSheet.getRange('D13').setValue(enrichedData['工事場所_府県'] || '');
+    }
+    SpreadsheetApp.flush();
+
+    // PDF化
+    var pdfFile = exportSpreadsheetAsPdf(spreadsheet, pdfFileName, OUTPUT_CONFIG.OUTPUT_FOLDER_ID);
+
+    updatePdfExportLogFileName(seq, pdfFileName);
+
+    return {
+      success: true,
+      url: getFileDownloadUrl(pdfFile),
+      filename: pdfFileName,
+      fileId: pdfFile.getId(),
+      outputNo: seq.出力番号
+    };
+  } catch (e) {
+    Logger.log('小口契約協議書PDF出力エラー: ' + e.message);
     return { success: false, error: e.message };
   }
 }
@@ -7821,5 +7898,134 @@ function getCalendarEvents(yearMonth) {
   } catch (e) {
     Logger.log('カレンダーイベント取得エラー: ' + e.message);
     return { success: false, error: e.message };
+  }
+}
+
+// ========================================
+// PDF出力履歴・枝番管理
+// ========================================
+
+/** PDF出力履歴シート名 */
+var PDF_EXPORT_LOG_SHEET_NAME = 'PDF出力履歴';
+
+/** PDF出力履歴シートのヘッダ */
+var PDF_EXPORT_LOG_HEADERS = [
+  '出力日付',     // 1: yyyyMMdd
+  '部署',         // 2
+  '契約ID',       // 3
+  '枝番',         // 4: 当日通し番号
+  '出力番号',     // 5: '20260428-1' 形式
+  '初回出力日時', // 6: Date
+  '最終出力日時', // 7: Date
+  '出力回数',     // 8
+  'ファイル名'    // 9
+];
+
+/**
+ * PDF出力履歴シートを取得（無ければ作成）
+ * @returns {Sheet}
+ */
+function ensurePdfExportLogSheet() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(PDF_EXPORT_LOG_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PDF_EXPORT_LOG_SHEET_NAME);
+    sheet.getRange(1, 1, 1, PDF_EXPORT_LOG_HEADERS.length).setValues([PDF_EXPORT_LOG_HEADERS]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, PDF_EXPORT_LOG_HEADERS.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+/**
+ * 契約協議書PDF出力時の枝番を取得または発番
+ * 同日同契約はすでに発番済みの枝番を再利用、新規なら +1 で発番
+ * LockServiceで同時押下時の重複発番を防ぐ
+ * @param {string} contractId - 契約協議書ID
+ * @param {string} department - 部署
+ * @returns {{出力日付:string, 枝番:number, 出力番号:string, rowNum:number, isNew:boolean}}
+ */
+function getOrIssuePdfSequenceNo(contractId, department) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var sheet = ensurePdfExportLogSheet();
+    var today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd');
+    var now = new Date();
+    var lastRow = sheet.getLastRow();
+    var lastCol = PDF_EXPORT_LOG_HEADERS.length;
+
+    if (lastRow < 2) {
+      // 履歴なし — 当日1番目として発番
+      var firstOutputNo = today + '-1';
+      sheet.appendRow([today, department, contractId, 1, firstOutputNo, now, now, 1, '']);
+      return {
+        出力日付: today,
+        枝番: 1,
+        出力番号: firstOutputNo,
+        rowNum: sheet.getLastRow(),
+        isNew: true
+      };
+    }
+
+    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var maxEdabanToday = 0;
+    var matchRowIdx = -1;
+    for (var i = 0; i < values.length; i++) {
+      var rowDate = String(values[i][0]); // 出力日付
+      if (rowDate !== today) continue;
+      var n = parseInt(values[i][3], 10) || 0; // 枝番
+      if (n > maxEdabanToday) maxEdabanToday = n;
+      if (String(values[i][1]) === String(department) &&
+          String(values[i][2]) === String(contractId)) {
+        matchRowIdx = i;
+      }
+    }
+
+    if (matchRowIdx >= 0) {
+      // 既存レコード — 枝番を再利用し、最終出力日時/回数を更新
+      var rowNum = matchRowIdx + 2;
+      var existingEdaban = parseInt(values[matchRowIdx][3], 10);
+      var existingOutputNo = String(values[matchRowIdx][4]);
+      var newCount = (parseInt(values[matchRowIdx][7], 10) || 0) + 1;
+      sheet.getRange(rowNum, 7).setValue(now);     // 最終出力日時
+      sheet.getRange(rowNum, 8).setValue(newCount); // 出力回数
+      return {
+        出力日付: today,
+        枝番: existingEdaban,
+        出力番号: existingOutputNo,
+        rowNum: rowNum,
+        isNew: false
+      };
+    }
+
+    // 当日新規発番
+    var newEdaban = maxEdabanToday + 1;
+    var newOutputNo = today + '-' + newEdaban;
+    sheet.appendRow([today, department, contractId, newEdaban, newOutputNo, now, now, 1, '']);
+    return {
+      出力日付: today,
+      枝番: newEdaban,
+      出力番号: newOutputNo,
+      rowNum: sheet.getLastRow(),
+      isNew: true
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * PDF出力履歴シートのファイル名カラムを更新
+ * @param {Object} seq - getOrIssuePdfSequenceNoの戻り値
+ * @param {string} fileName
+ */
+function updatePdfExportLogFileName(seq, fileName) {
+  if (!seq || !seq.rowNum) return;
+  try {
+    var sheet = ensurePdfExportLogSheet();
+    sheet.getRange(seq.rowNum, 9).setValue(fileName);
+  } catch (e) {
+    Logger.log('PDF出力履歴ファイル名更新エラー: ' + e.message);
   }
 }
