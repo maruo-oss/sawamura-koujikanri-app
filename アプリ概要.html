@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>工事管理システム 機能・出力・ID一覧</title>
+<style>
+  :root{
+    --primary:#1e3a5f;
+    --accent:#2d6cdf;
+    --bg:#f6f8fc;
+    --card:#ffffff;
+    --border:#dfe6ef;
+    --text:#1a2233;
+    --muted:#5b6779;
+    --ok:#1f7a4d;
+    --warn:#b8860b;
+    --ng:#b23a3a;
+    --section:#eef3fb;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    margin:0;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  .container{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  header{
+    background:linear-gradient(135deg,var(--primary),#2a4d7a);
+    color:#fff;
+    padding:32px 36px;
+    border-radius:14px;
+    margin-bottom:28px;
+    box-shadow:0 6px 20px rgba(30,58,95,.18);
+  }
+  header h1{margin:0 0 8px;font-size:26px;letter-spacing:.02em}
+  header p{margin:0;opacity:.9;font-size:14px}
+  h2{
+    font-size:20px;
+    margin:36px 0 14px;
+    padding:10px 16px;
+    border-left:6px solid var(--accent);
+    background:var(--section);
+    border-radius:0 8px 8px 0;
+  }
+  h3{
+    font-size:16px;
+    margin:24px 0 10px;
+    color:var(--primary);
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:22px 26px;
+    margin-bottom:20px;
+    box-shadow:0 1px 4px rgba(0,0,0,.03);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin:8px 0 16px;
+    font-size:14px;
+    background:#fff;
+  }
+  th,td{
+    border:1px solid var(--border);
+    padding:9px 12px;
+    text-align:left;
+    vertical-align:top;
+  }
+  th{
+    background:#f0f4fb;
+    color:var(--primary);
+    font-weight:600;
+    white-space:nowrap;
+  }
+  tr:nth-child(even) td{background:#fafbfd}
+  code{
+    background:#eef3fb;
+    color:#1e3a5f;
+    padding:1px 7px;
+    border-radius:4px;
+    font-size:13px;
+    font-family:"SFMono-Regular",Consolas,Monaco,monospace;
+  }
+  .badge{
+    display:inline-block;
+    padding:2px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .b-ok{background:#e3f4ec;color:var(--ok)}
+  .b-warn{background:#fdf3dc;color:var(--warn)}
+  .b-ng{background:#fbe5e5;color:var(--ng)}
+  .flow{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:8px 0;
+  }
+  .flow .step{
+    background:#fff;
+    border:1.5px solid var(--accent);
+    color:var(--primary);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:13px;
+    font-weight:600;
+    min-width:140px;
+    text-align:center;
+    position:relative;
+  }
+  .flow .step.gap{
+    border-color:var(--ng);
+    background:#fff7f7;
+    color:var(--ng);
+  }
+  .arrow{
+    align-self:center;
+    color:var(--accent);
+    font-weight:700;
+    font-size:16px;
+  }
+  .alert{
+    background:#fff7f0;
+    border:1.5px solid #f0b88a;
+    border-left:6px solid #d97742;
+    border-radius:10px;
+    padding:18px 22px;
+    margin:24px 0;
+  }
+  .alert h3{margin-top:0;color:#a8521c}
+  .alert ul{margin:8px 0 0;padding-left:20px}
+  .alert li{margin-bottom:4px}
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:780px){
+    .grid2{grid-template-columns:1fr}
+    .container{padding:20px 14px 60px}
+  }
+  .note{
+    color:var(--muted);
+    font-size:13px;
+    margin-top:6px;
+  }
+  .legend{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin:6px 0 12px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  footer{
+    margin-top:40px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>工事管理システム ― 機能・出力・ID 一覧</h1>
+    <p>GAS（Google Apps Script）+ Vue.js 3 + Google スプレッドシートで構築された建設業向け業務アプリ／<span style="opacity:.85">2026-05-19 時点</span></p>
+  </header>
+
+  <!-- ============ 1. 全体フロー ============ -->
+  <h2>1. アプリ全体の業務フロー</h2>
+  <div class="card">
+    <p>案件発生から経理処理までの全体像です。<strong style="color:var(--ng)">赤枠</strong>は現アプリで未整備（経理が使う帳票領域）。</p>
+    <div class="flow">
+      <div class="step">案件登録</div><span class="arrow">→</span>
+      <div class="step">契約協議書<br>作成・承認</div><span class="arrow">→</span>
+      <div class="step">工事登録<br>（自動連携）</div><span class="arrow">→</span>
+      <div class="step">実行予算<br>作成</div><span class="arrow">→</span>
+      <div class="step">発注<br>（注文書発行）</div>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <div class="step">業者請求書<br>受領・登録</div><span class="arrow">→</span>
+      <div class="step gap">現場員査定<br>（原本添付）</div><span class="arrow">→</span>
+      <div class="step gap">支払額確定</div><span class="arrow">→</span>
+      <div class="step gap">振込データ出力<br>（全銀FB）</div><span class="arrow">→</span>
+      <div class="step gap">支払通知書<br>発行・郵送</div>
+    </div>
+    <div class="legend" style="margin-top:14px">
+      <span><span class="badge b-ok">青枠</span> 実装済</span>
+      <span><span class="badge b-ng">赤枠</span> 未整備（経理帳票）</span>
+    </div>
+  </div>
+
+  <!-- ============ 2. 主要機能一覧 ============ -->
+  <h2>2. 搭載されている機能</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th style="width:160px">カテゴリ</th><th>機能内容</th><th style="width:120px">状態</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>工事管理</td><td>案件の一覧/作成/編集/論理削除、工事の登録、進捗率、ロック、ステータス別サマリー</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>契約協議</td><td>契約協議書の作成・承認、案件・工事の自動登録、Excel/PDF 出力（通常・小口）、複写機能</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>発注管理</td><td>発注作成・編集、見積明細管理、注文協議書／注文書 PDF 出力、支払データ自動生成、複写機能</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>請求管理</td><td>請求書の作成・ステータス管理、入金履歴の記録</td><td><span class="badge b-warn">部分実装</span></td></tr>
+        <tr><td>支払管理</td><td>支払の作成、承認フロー、支払履歴、協力会社ごとの手形比率・サイト自動適用</td><td><span class="badge b-warn">部分実装</span></td></tr>
+        <tr><td>決算集計</td><td>月次・期別集計、決算集計 CSV 出力</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>実行予算</td><td>案件別予算管理・実績集計</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>工事台帳</td><td>工事台帳作成、契約・発注・請求・支払・予算データの集約表示</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>スケジュール</td><td>ガントチャート、マイルストーン（予定／実績／遅延検知）、カレンダー表示</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>マスタ管理</td><td>顧客マスタ・協力会社（業者）マスタ・社員マスタ</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>共通機能</td><td>CSV インポート、アーカイブ（論理削除データ）、操作履歴（監査ログ）、添付ファイル管理（Drive 連携）、ドキュメントプレビュー</td><td><span class="badge b-ok">実装済</span></td></tr>
+        <tr><td>権限管理</td><td>readonly / staff / manager / admin の 4 段階 RBAC</td><td><span class="badge b-ok">実装済</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============ 3. ID一覧 ============ -->
+  <h2>3. ユニーク ID（自動採番）一覧</h2>
+  <div class="card">
+    <p>アプリ内で <strong>14 種類</strong> のエンティティが自動採番されます。年度は会計年度（10/1 始まり）に連動。</p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:160px">エンティティ</th>
+          <th style="width:230px">採番フォーマット例</th>
+          <th>採番ルール</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>案件</td><td><code>PJ-2026-0001</code></td><td>PJ + 年度 + 連番(4桁)</td></tr>
+        <tr><td>工事</td><td><code>75-00001</code></td><td>会計期番号 + 連番(5桁)</td></tr>
+        <tr><td>契約協議書</td><td><code>CT-K-2026-0001</code></td><td>CT + 工事区分(K/E/S/A/D) + 年度 + 連番</td></tr>
+        <tr><td>発注</td><td><code>ORD-2026-0001</code></td><td>ORD + 年度 + 連番(4桁)</td></tr>
+        <tr><td>見積もり詳細</td><td><code>Q-000001</code></td><td>Q + 純連番(6桁)</td></tr>
+        <tr><td>請求</td><td><code>INV-2026-0001</code></td><td>INV + 年度 + 連番(4桁)</td></tr>
+        <tr><td>支払</td><td><code>PAY-2026-0001</code></td><td>PAY + 年度 + 連番(4桁)</td></tr>
+        <tr><td>支払履歴</td><td><code>PHY-2026-0001</code></td><td>PHY + 年度 + 連番(4桁)</td></tr>
+        <tr><td>入金履歴</td><td><code>IHY-2026-0001</code></td><td>IHY + 年度 + 連番(4桁)</td></tr>
+        <tr><td>実行予算</td><td><code>BDG-2026-0001</code></td><td>BDG + 年度 + 連番(4桁)</td></tr>
+        <tr><td>工事台帳</td><td><code>LED-2026-0001</code></td><td>LED + 年度 + 連番(4桁)</td></tr>
+        <tr><td>マイルストーン</td><td><code>MS-000001</code></td><td>MS + 純連番(6桁)</td></tr>
+        <tr><td>監査ログ</td><td><code>LOG-20260519-101530-123</code></td><td>LOG + 日時 + ランダム3桁</td></tr>
+        <tr><td>添付ファイル</td><td><code>ATT-20260519-123456</code></td><td>ATT + 日付 + ランダム6桁</td></tr>
+        <tr><td>顧客</td><td><code>CUS-00001</code></td><td>CUS + 純連番(5桁)</td></tr>
+      </tbody>
+    </table>
+    <p class="note">※ <strong>社員番号</strong>と<strong>協力会社（業者）コード</strong>は手動入力（自動採番なし）。<br>
+       ※ プレフィックス「K/E/S/A/D」は工事区分（建築/電気/設備/解体/土木など）に対応。</p>
+  </div>
+
+  <!-- ============ 4. 出力できるもの ============ -->
+  <h2>4. 出力できる書式・ファイル一覧</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:180px">出力名</th>
+          <th>内容</th>
+          <th style="width:140px">形式</th>
+          <th style="width:160px">操作場所</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>契約協議書（通常）</td>
+          <td>スプレッドシートテンプレートに契約データを差し込み</td>
+          <td>Excel(.xlsx) / PDF</td>
+          <td>契約協議書フォーム</td>
+        </tr>
+        <tr>
+          <td>契約協議書（小口）</td>
+          <td>小口工事向けテンプレートに差し込み</td>
+          <td>Excel(.xlsx) / PDF</td>
+          <td>契約協議書フォーム</td>
+        </tr>
+        <tr>
+          <td>注文協議書</td>
+          <td>発注内容を注文協議書テンプレートに差し込み</td>
+          <td>Excel / PDF</td>
+          <td>発注フォーム</td>
+        </tr>
+        <tr>
+          <td>注文書</td>
+          <td>注文書番号を自動採番してPDF化</td>
+          <td>PDF</td>
+          <td>発注フォーム</td>
+        </tr>
+        <tr>
+          <td>決算集計</td>
+          <td>期間内の工事別決算データ（合計行付き）</td>
+          <td>CSV（UTF-8 BOM 付）</td>
+          <td>決算集計画面</td>
+        </tr>
+        <tr>
+          <td>添付ファイル</td>
+          <td>Google Drive 上のファイルダウンロード</td>
+          <td>各添付ファイルの形式そのまま</td>
+          <td>各画面の添付タブ</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">出力ファイルは全て <code>OUTPUT_CONFIG.OUTPUT_FOLDER_ID</code> で指定された Google Drive フォルダに自動保存されます。</p>
+  </div>
+
+  <!-- ============ 5. 経理が使う帳票（未整備領域） ============ -->
+  <h2>5. <span style="color:var(--ng)">経理が使う帳票は未整備</span></h2>
+  <div class="alert">
+    <h3>⚠ 現アプリには経理運用に必要な帳票・機能がまだ含まれていません</h3>
+    <p>「注文書発行」までは出力が揃っていますが、その先の<strong>請求書受領 → 査定 → 確定 → 振込 → 通知</strong>のフローで以下が未整備です。</p>
+    <ul>
+      <li><strong>請求書 PDF 原本の添付・管理</strong>　— 業者から受け取った請求書を登録時に紐付ける機能がない</li>
+      <li><strong>全銀フォーマット（FB データ）出力</strong>　— インターネットバンキング用の振込データを出せない</li>
+      <li><strong>業者向け月次支払額決定通知書</strong>　— PDF 生成・郵送・オンライン通知すべて未対応</li>
+      <li><strong>メール送信機能</strong>　— アプリ全体でメール送信機能そのものが未実装</li>
+      <li><strong>業者別／現場別の支払台帳レポート</strong>　— 集計 API はあるが UI と出力機能がない</li>
+      <li><strong>資金繰りダッシュボード</strong>　— 期日別の「手形支払予定」「振込予定」の時系列ビューがない</li>
+      <li><strong>支払額の訂正履歴</strong>　— 請求額と支払額の差分・訂正理由の記録機能がない</li>
+      <li><strong>支払単位の確定ロック</strong>　— 現状は決算確定時のみロック（個別支払の確定ロック不可）</li>
+      <li><strong>工事台帳・実行予算の PDF/Excel 出力</strong>　— 画面表示のみ、印刷帳票として出力不可</li>
+    </ul>
+  </div>
+
+  <!-- ============ 6. 追加実装の優先度提案 ============ -->
+  <h2>6. 経理運用を成立させるために追加実装すべき機能（優先度案）</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th style="width:70px">優先度</th><th>機能</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge b-ng">高</span></td>
+          <td>請求書 PDF の添付機能</td>
+          <td>既存の添付ファイル基盤を流用可。査定モーダルから即プレビューできる導線を追加</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-ng">高</span></td>
+          <td>全銀フォーマット出力</td>
+          <td>確定済み振込分を FB データ(.txt) でダウンロード。経理が銀行へアップロード</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-ng">高</span></td>
+          <td>支払通知書の自動生成</td>
+          <td>業者×月の支払明細を PDF 化＋メール送信。既存のテンプレート方式で対応可</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-warn">中</span></td>
+          <td>資金繰りダッシュボード</td>
+          <td>期日別に「手形」「振込」の支払予定を時系列表示</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-warn">中</span></td>
+          <td>業者別支払台帳画面</td>
+          <td>集計 API は既存。UI を追加するだけで月次・期別ビューが作れる</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-warn">中</span></td>
+          <td>支払額訂正の差分管理</td>
+          <td>請求額と支払額のフィールドを分離し、訂正理由を記録</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    工事管理アプリ調査資料／生成日：2026-05-19
+  </footer>
+
+</div>
+</body>
+</html>
