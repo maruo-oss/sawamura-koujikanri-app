@@ -140,6 +140,27 @@ function getAllData(sheetName) {
 }
 
 /**
+ * ID・コード照合用の正規化
+ * 型・前後空白に加え、全角英数字→半角、不可視文字（ゼロ幅・NBSP・全角空白）も吸収する。
+ * ※会社名など本文の比較には使わない（全角を含む正当な文字を壊すため）。ID/コード専用。
+ * @param {*} value 任意の値
+ * @returns {string} 正規化済み文字列
+ */
+function normalizeId(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    // 全角英数字・記号(U+FF01-FF5E) -> 半角(U+0021-007E)
+    .replace(/[！-～]/g, function(ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    })
+    // ゼロ幅スペース・ZWJ・BOM等を除去
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // 全角空白(U+3000)・NBSP(U+00A0) -> 半角空白（後段のtrimで除去）
+    .replace(/[\u3000\u00A0]/g, ' ')
+    .trim();
+}
+
+/**
  * 条件に一致するデータを検索
  * 文字列として比較することで型の不一致を防ぐ
  */
@@ -148,10 +169,8 @@ function findData(sheetName, conditions) {
 
   return allData.filter(function(row) {
     return Object.keys(conditions).every(function(key) {
-      // 文字列に変換してトリムしてから比較
-      var rowValue = String(row[key] || '').trim();
-      var condValue = String(conditions[key] || '').trim();
-      return rowValue === condValue;
+      // ID/コード照合と同じ正規化で比較（型・全角・空白差を吸収）
+      return normalizeId(row[key]) === normalizeId(conditions[key]);
     });
   });
 }
@@ -162,11 +181,10 @@ function findData(sheetName, conditions) {
  */
 function findById(sheetName, idColumn, idValue) {
   var allData = getAllData(sheetName);
-  var searchValue = String(idValue).trim();
+  var searchValue = normalizeId(idValue);
 
   for (var i = 0; i < allData.length; i++) {
-    var rowId = String(allData[i][idColumn] || '').trim();
-    if (rowId === searchValue) {
+    if (normalizeId(allData[i][idColumn]) === searchValue) {
       return allData[i];
     }
   }
@@ -1000,10 +1018,9 @@ var InvoiceRepository = {
 
   findByCustomerId: function(customerId) {
     var allData = getAllDataExcludeDeleted(this.SHEET_NAME);
-    var searchValue = String(customerId).trim();
+    var searchValue = normalizeId(customerId);
     return allData.filter(function(row) {
-      var rowCustomerId = String(row['請求先顧客ID'] || '').trim();
-      return rowCustomerId === searchValue;
+      return normalizeId(row['請求先顧客ID']) === searchValue;
     });
   },
 
@@ -1085,10 +1102,9 @@ var PaymentRepository = {
 
   findByVendorId: function(vendorId) {
     var allData = getAllDataExcludeDeleted(this.SHEET_NAME);
-    var searchValue = String(vendorId).trim();
+    var searchValue = normalizeId(vendorId);
     return allData.filter(function(row) {
-      var rowVendorId = String(row['協力会社ID'] || '').trim();
-      return rowVendorId === searchValue;
+      return normalizeId(row['協力会社ID']) === searchValue;
     });
   },
 
@@ -1722,7 +1738,8 @@ var MasterLookup = {
       var customers = CustomerRepository.findAll();
       var self = this;
       customers.forEach(function(c) {
-        self._customerMap[c['顧客ID']] = c['顧客名'];
+        // キーは findById と同じく String().trim() で正規化（型・空白差での照合漏れ防止）
+        self._customerMap[normalizeId(c['顧客ID'])] = c['顧客名'];
       });
     }
     return this._customerMap;
@@ -1738,7 +1755,8 @@ var MasterLookup = {
       var vendors = VendorRepository.findAll();
       var self = this;
       vendors.forEach(function(v) {
-        self._vendorMap[v['仕入先コード']] = v['会社名'];
+        // キーは findById と同じく String().trim() で正規化（型・空白差での照合漏れ防止）
+        self._vendorMap[normalizeId(v['仕入先コード'])] = v['会社名'];
       });
     }
     return this._vendorMap;
@@ -1750,7 +1768,7 @@ var MasterLookup = {
    * @returns {string} 顧客名（見つからない場合はIDをそのまま返す）
    */
   getCustomerName: function(id) {
-    return this.getCustomerMap()[id] || id;
+    return this.getCustomerMap()[normalizeId(id)] || id;
   },
 
   /**
@@ -1759,7 +1777,7 @@ var MasterLookup = {
    * @returns {string} 会社名（見つからない場合はIDをそのまま返す）
    */
   getVendorName: function(id) {
-    return this.getVendorMap()[id] || id;
+    return this.getVendorMap()[normalizeId(id)] || id;
   },
 
   /**

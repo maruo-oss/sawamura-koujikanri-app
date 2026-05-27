@@ -921,7 +921,7 @@ function getProjects(filter) {
       // ID→名前変換を付与（「顧客名」列には実際はIDが格納されている）
       var customerId = obj['顧客名'];
       obj['顧客ID'] = customerId;
-      obj['顧客名_表示'] = customerMap[customerId] || customerId;
+      obj['顧客名_表示'] = customerMap[normalizeId(customerId)] || customerId;
 
       return obj;
     });
@@ -1313,7 +1313,7 @@ function getContracts(department) {
         contractId: row['協議書ID'] || '',
         projectName: row['工事名'] || '',
         customerId: customerId || '',
-        customerName: customerMap[customerId] || customerId || '',
+        customerName: customerMap[normalizeId(customerId)] || customerId || '',
         contractAmount: row['契約金額'] || 0,
         status: row['承認ステータス'] || '作成中',
         createdAt: formatDateForApi(row['作成日']),
@@ -1375,7 +1375,7 @@ function getContractById(contractId, department) {
     Logger.log('findById結果: ' + (contract ? '見つかった' : 'null'));
     if (contract) {
       var customerId = contract['発注者'];
-      contract['発注者_表示'] = customerMap[customerId] || customerId;
+      contract['発注者_表示'] = customerMap[normalizeId(customerId)] || customerId;
     }
 
     // 日付フィールドを文字列に変換（シリアライズ対策）
@@ -1596,7 +1596,7 @@ function getApprovedContractsForProject(department) {
           contractId: row['協議書ID'],
           projectName: row['工事名'],
           customerId: customerId,
-          customerName: customerMap[customerId] || customerId,
+          customerName: customerMap[normalizeId(customerId)] || customerId,
           contractAmount: row['契約金額'] || 0,
           department: 'ソリューション事業部',
           createdAt: formatDateForApi(row['作成日'])
@@ -2158,7 +2158,7 @@ function getOrders() {
       // ID→名前変換を付与（「施主名(注文決定業者名)」列には実際は仕入先コードが格納されている）
       var vendorId = obj['施主名(注文決定業者名)'];
       obj['仕入先コード'] = vendorId;
-      obj['協力会社名_表示'] = vendorMap[vendorId] || vendorId;
+      obj['協力会社名_表示'] = vendorMap[normalizeId(vendorId)] || vendorId;
 
       return obj;
     });
@@ -2199,7 +2199,7 @@ function getOrderById(orderId) {
     var vendorMap = MasterLookup.getVendorMap();
     var vendorId = result['施主名(注文決定業者名)'];
     result['仕入先コード'] = vendorId;
-    result['協力会社名_表示'] = vendorMap[vendorId] || vendorId;
+    result['協力会社名_表示'] = vendorMap[normalizeId(vendorId)] || vendorId;
 
     Logger.log('getOrderById成功: ' + orderId);
     return result;
@@ -2223,7 +2223,7 @@ function getOrdersByConstructionId(constructionId) {
         orderId: row['発注ID'],
         constructionId: row['関連工事番号'],
         vendorId: vendorId,
-        vendorName: vendorMap[vendorId] || vendorId,
+        vendorName: vendorMap[normalizeId(vendorId)] || vendorId,
         orderContent: row['注文内容'],
         orderAmount: Number(row['注文金額'] || 0),
         budgetAmount: Number(row['実行予算金額'] || 0),
@@ -2407,7 +2407,7 @@ function createInvoiceFromContract(contractId, projectId) {
     // 契約協議書では顧客IDは「発注者」カラムに格納されている
     var customerId = contract['発注者'] || '';
     var customerMap = MasterLookup.getCustomerMap();
-    var customerName = customerMap[customerId] || customerId || '';
+    var customerName = customerMap[normalizeId(customerId)] || customerId || '';
 
     var amountExcludingTax = Number(contract['工事価格']) || 0;
 
@@ -2657,7 +2657,7 @@ function issueOrderSheet(orderId) {
     // 6. 協力会社名を取得（表示用）
     var vendorMap = MasterLookup.getVendorMap();
     var vendorId = order['施主名(注文決定業者名)'];
-    order['協力会社名_表示'] = vendorMap[vendorId] || vendorId;
+    order['協力会社名_表示'] = vendorMap[normalizeId(vendorId)] || vendorId;
 
     // 7. ファイル名を生成
     var constructionId = order['関連工事番号'] || orderId;
@@ -3031,7 +3031,7 @@ function getInvoices(filter) {
         invoiceId: row['請求ID'],
         projectId: row['案件ID'],
         customerId: customerId,
-        customerName: customerMap[customerId] || row['請求先顧客名'] || customerId,
+        customerName: customerMap[normalizeId(customerId)] || row['請求先顧客名'] || customerId,
         invoiceType: row['請求区分'],
         invoiceDate: formatDateForApi(row['請求日']),
         amountExcludingTax: Number(row['請求金額(税抜)'] || 0),
@@ -3335,7 +3335,7 @@ function getPayments(filter) {
         projectId: projectId,
         projectName: projectMap[projectId] || constructionMap[projectId] || projectId,
         vendorId: vendorId,
-        vendorName: vendorMap[vendorId] || row['協力会社名'] || vendorId,
+        vendorName: vendorMap[normalizeId(vendorId)] || row['協力会社名'] || vendorId,
         invoiceMonth: invoiceMonth,
         closingDay: row['締日'],
         dueDate: formatDateForApi(row['支払予定日']),
@@ -4010,7 +4010,7 @@ function getOrdersByProjectId(projectId) {
           orderId: row['発注ID'],
           constructionId: row['関連工事番号'],
           vendorId: vendorId,
-          vendorName: vendorMap[vendorId] || vendorId,
+          vendorName: vendorMap[normalizeId(vendorId)] || vendorId,
           orderContent: row['注文内容'],
           orderAmount: Number(row['注文金額'] || 0),
           budgetAmount: Number(row['実行予算金額'] || 0),
@@ -7457,7 +7457,7 @@ function getLedgerByConstructionId(constructionId) {
     try {
       var allVendors = VendorRepository.findAll();
       allVendors.forEach(function(v) {
-        vendorMap[v['仕入先コード']] = v;
+        vendorMap[normalizeId(v['仕入先コード'])] = v;
       });
     } catch (e) {
       Logger.log('協力会社マスタ取得エラー: ' + e.message);
@@ -7468,7 +7468,7 @@ function getLedgerByConstructionId(constructionId) {
       var mapped = Object.assign({}, order);
       // 施主名(注文決定業者名)列には仕入先コードが格納されている
       var vendorId = order['施主名(注文決定業者名)'] || order['協力会社ID'] || order['仕入先コード'] || '';
-      var vendor = vendorMap[vendorId];
+      var vendor = vendorMap[normalizeId(vendorId)];
       mapped['仕入先コード'] = vendorId;
       mapped['協力会社名'] = vendor ? (vendor['会社名'] || vendor['略称'] || vendorId) : (order['協力会社名'] || vendorId);
       mapped['仕入先名称'] = mapped['協力会社名'];
@@ -7502,8 +7502,8 @@ function getLedgerByConstructionId(constructionId) {
     var vendors = [];
     orders.forEach(function(order) {
       var vendorId = order['仕入先コード'];
-      if (vendorId && vendorMap[vendorId]) {
-        var vendor = vendorMap[vendorId];
+      if (vendorId && vendorMap[normalizeId(vendorId)]) {
+        var vendor = vendorMap[normalizeId(vendorId)];
         if (!vendors.some(function(v) { return v['仕入先コード'] === vendor['仕入先コード']; })) {
           vendors.push(vendor);
         }
