@@ -2441,13 +2441,21 @@ function getQuotesByOrderId(orderId) {
     var quotes = QuoteRepository.findByOrderId(orderId);
     Logger.log('取得した見積もりデータ件数: ' + quotes.length);
 
-    // フロントエンドは日本語キーでアクセスするため、そのまま返す
+    // 見積業者名には仕入先コードが保存されているため、会社名へ変換して返す。
+    // 変換できた場合は _vendorId に元コードを保持し、再保存時にコードへ戻せるようにする。
+    var vendorMap = MasterLookup.getVendorMap();
+
+    // フロントエンドは日本語キーでアクセスするため、日本語キーで返す
     return quotes.map(function(row) {
+      var rawVendor = row['見積業者名'] || '';
+      var vendorName = vendorMap[normalizeId(rawVendor)];
+      var displayVendor = vendorName || rawVendor;
       return {
         '見積もり詳細ID': row['見積もり詳細ID'],
         '発注ID': row['発注ID'],
         '工事番号': row['工事番号'],
-        '見積業者名': row['見積業者名'] || '',
+        '見積業者名': displayVendor,
+        '_vendorId': vendorName ? rawVendor : '',
         'TEL': row['TEL'] || '',
         '担当者': row['担当者'] || '',
         '見積金額': row['見積金額'] || 0,
@@ -2831,7 +2839,7 @@ function getVendorsLight() {
     return rows.map(function(r) {
       return {
         vendorId: String(r['仕入先コード'] || ''),
-        vendorName: String(r['会社名'] || ''),
+        vendorName: String(getVendorNameFromRow(r) || ''),
         shortName: String(r['略称'] || ''),
         kana: String(r['カナ'] || ''),
         vendorRank: String(r['業者ランク'] || '')
@@ -2861,6 +2869,18 @@ function getVendorById(vendorId) {
 }
 
 /**
+ * 協力会社マスタ行から表示用の会社名を取得する。
+ * このマスタには「会社名」列が無く、実際の名称は「名称１」列に入っているため、
+ * 名称１ → 会社名 → 略称 → 仕入先コード の順でフォールバックする。
+ * @param {Object} row - 協力会社マスタの行データ
+ * @returns {string} 表示用会社名
+ */
+function getVendorNameFromRow(row) {
+  if (!row) return '';
+  return row['名称１'] || row['名称1'] || row['会社名'] || row['略称'] || row['仕入先コード'] || '';
+}
+
+/**
  * 協力会社データをフォーマット（共通処理）
  * AppSheetの自動計算を再現：
  * - 許可ステータス: IF(OR(ISBLANK([許可期限]), [許可期限] < TODAY()), "なし", "あり")
@@ -2884,7 +2904,7 @@ function formatVendorData(row) {
 
   return {
     vendorId: row['仕入先コード'],
-    vendorName: row['会社名'],
+    vendorName: getVendorNameFromRow(row),
     shortName: row['略称'],
     kana: row['カナ'] || '',
     address: row['住所'],
@@ -2916,6 +2936,8 @@ function saveVendor(data) {
   try {
     var sheetData = {
       '仕入先コード': data.vendorId || '',
+      // 実際の名称列は「名称１」。存在しない列は更新時に無視されるため両方に書く。
+      '名称１': data.vendorName || '',
       '会社名': data.vendorName || '',
       '略称': data.shortName || '',
       'カナ': data.kana || '',
@@ -3662,7 +3684,7 @@ function applyVendorPaymentTerms(vendorId, baseAmount, orderCategory) {
       success: true,
       data: {
         vendorId: vendorId,
-        vendorName: vendor['会社名'],
+        vendorName: getVendorNameFromRow(vendor),
         closingDay: vendor['締日'],
         paymentMonth: vendor['支払日（ヶ月後）'],
         paymentDay: vendor['支払日'],
@@ -4644,7 +4666,7 @@ function enrichOrderDataForDocument(order) {
       if (!vendor) {
         var allVendors = VendorRepository.findAll();
         vendor = allVendors.filter(function(v) {
-          return String(v['会社名'] || '').trim() === String(vendorId).trim();
+          return String(getVendorNameFromRow(v) || '').trim() === String(vendorId).trim();
         })[0] || null;
       }
       if (vendor) {
@@ -4656,10 +4678,18 @@ function enrichOrderDataForDocument(order) {
         for (var vKey in vendor) {
           data['施主名(注文決定業者名)].[' + vKey] = vendor[vKey];
         }
-        // よく使うフィールドは短縮名も追加
-        data['協力会社名'] = vendor['会社名'];
-        data['協力会社名_表示'] = vendor['会社名'];
-        data['注文決定業者名'] = vendor['会社名'];
+        // よく使うフィールドは短縮名も追加（名称は「名称１」列。getVendorNameFromRowで解決）
+        var vendorDisplayName = getVendorNameFromRow(vendor);
+        data['協力会社名'] = vendorDisplayName;
+        data['協力会社名_表示'] = vendorDisplayName;
+        data['注文決定業者名'] = vendorDisplayName;
+        // 素のプレースホルダ <<[施主名(注文決定業者名)]>> はこのキーを参照する。
+        // 生のままだと仕入先コードが出力されるため、会社名で上書きする。
+        data['施主名(注文決定業者名)'] = vendorDisplayName;
+        // テンプレートはリレーション参照 <<[施主名(注文決定業者名)].[会社名]>> を使うが、
+        // マスタに「会社名」列が無いため、解決済み名称を会社名エイリアスキーにも入れる。
+        data['施主名(注文決定業者名).会社名'] = vendorDisplayName;
+        data['施主名(注文決定業者名)].[会社名'] = vendorDisplayName;
       } else {
         // マスタに見つからない場合、元の値を業者名として使用
         data['協力会社名'] = vendorId;
@@ -4721,13 +4751,14 @@ function enrichOrderDataForDocument(order) {
             if (!quoteVendor) {
               var allV = VendorRepository.findAll();
               quoteVendor = allV.filter(function(v) {
-                return String(v['会社名'] || '').trim() === String(quoteVendorId).trim();
+                return String(getVendorNameFromRow(v) || '').trim() === String(quoteVendorId).trim();
               })[0] || null;
             }
             if (quoteVendor) {
-              data[prefix + '会社名'] = quoteVendor['会社名'];
-              data[prefix + '協力会社名'] = quoteVendor['会社名'];
-              data[prefix + '見積業者名'] = quoteVendor['会社名'];
+              var quoteVendorName = getVendorNameFromRow(quoteVendor);
+              data[prefix + '会社名'] = quoteVendorName;
+              data[prefix + '協力会社名'] = quoteVendorName;
+              data[prefix + '見積業者名'] = quoteVendorName;
             } else {
               data[prefix + '会社名'] = quoteVendorId;
               data[prefix + '協力会社名'] = quoteVendorId;
@@ -4767,11 +4798,11 @@ function enrichOrderDataForDocument(order) {
             if (!selectedVendor) {
               var allV2 = VendorRepository.findAll();
               selectedVendor = allV2.filter(function(v) {
-                return String(v['会社名'] || '').trim() === String(selectedVendorId).trim();
+                return String(getVendorNameFromRow(v) || '').trim() === String(selectedVendorId).trim();
               })[0] || null;
             }
             if (selectedVendor) {
-              data['見積業者名'] = selectedVendor['会社名'];
+              data['見積業者名'] = getVendorNameFromRow(selectedVendor);
             } else {
               data['見積業者名'] = selectedVendorId;
             }
@@ -7470,7 +7501,7 @@ function getLedgerByConstructionId(constructionId) {
       var vendorId = order['施主名(注文決定業者名)'] || order['協力会社ID'] || order['仕入先コード'] || '';
       var vendor = vendorMap[normalizeId(vendorId)];
       mapped['仕入先コード'] = vendorId;
-      mapped['協力会社名'] = vendor ? (vendor['会社名'] || vendor['略称'] || vendorId) : (order['協力会社名'] || vendorId);
+      mapped['協力会社名'] = vendor ? getVendorNameFromRow(vendor) : (order['協力会社名'] || vendorId);
       mapped['仕入先名称'] = mapped['協力会社名'];
       mapped['工事内容'] = order['工事内容'] || order['注文内容'] || '';
       mapped['発注金額'] = order['発注金額'] || order['注文金額'] || 0;

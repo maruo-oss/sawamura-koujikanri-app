@@ -969,7 +969,8 @@ var VendorRepository = {
 
     return allData.filter(function(row) {
       try {
-        return prefixMatch(row['会社名'], keyword) ||
+        return prefixMatch(row['名称１'], keyword) ||
+               prefixMatch(row['会社名'], keyword) ||
                prefixMatch(row['略称'], keyword) ||
                prefixMatch(row['カナ'], keyword);
       } catch (e) {
@@ -1756,7 +1757,9 @@ var MasterLookup = {
       var self = this;
       vendors.forEach(function(v) {
         // キーは findById と同じく String().trim() で正規化（型・空白差での照合漏れ防止）
-        self._vendorMap[normalizeId(v['仕入先コード'])] = v['会社名'];
+        // このマスタは名称が「名称１」列に入っているため getVendorNameFromRow で解決
+        // （名称１→会社名→略称→コードの順でフォールバック）
+        self._vendorMap[normalizeId(v['仕入先コード'])] = getVendorNameFromRow(v);
       });
     }
     return this._vendorMap;

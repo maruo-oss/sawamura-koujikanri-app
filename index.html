@@ -6488,6 +6488,9 @@ const OrderForm = {
       if (this.vendorSearchKeyword !== this.form.vendorName) {
         this.form.vendorId = '';
       }
+      // 手入力値を保存対象（form.vendorName）へ同期。
+      // 候補を選ばず手入力したまま保存しても入力が破棄されないようにする。
+      this.form.vendorName = this.vendorSearchKeyword;
     },
     onVendorFocus() {
       this.showVendorSuggestions = true;
@@ -6508,8 +6511,10 @@ const OrderForm = {
     async selectVendor(vendor) {
       // まずサジェストを閉じてから値をセット（blur競合防止）
       this.showVendorSuggestions = false;
-      this.vendorSearchKeyword = vendor.vendorName;
-      this.form.vendorName = vendor.vendorName;
+      // 会社名が空のマスタでも選択できるよう 会社名→略称→コード の順でフォールバック
+      const vendorName = vendor.vendorName || vendor.shortName || vendor.vendorId || '';
+      this.vendorSearchKeyword = vendorName;
+      this.form.vendorName = vendorName;
       this.form.vendorId = vendor.vendorId || '';
       // 業者ランクはマスタに値がある場合のみ上書き（手動入力値を保持）
       if (vendor.vendorRank) this.form.vendorRank = vendor.vendorRank;
@@ -6837,7 +6842,8 @@ const OrderForm = {
      * 見積もり業者を選択
      */
     selectQuoteVendor(vendor, index) {
-      this.quotes[index]['見積業者名'] = vendor.vendorName;
+      // 会社名が空のマスタでも選択できるよう 会社名→略称→コード の順でフォールバック
+      this.quotes[index]['見積業者名'] = vendor.vendorName || vendor.shortName || vendor.vendorId || '';
       this.quotes[index]['_vendorId'] = vendor.vendorId || '';
       // TELと担当者も自動セット（協力会社マスタにあれば）
       if (vendor.tel) {
@@ -6963,8 +6969,8 @@ const OrderForm = {
                   autocomplete="off"
                 />
                 <ul v-if="showVendorSuggestions && filteredVendors.length > 0" class="suggestion-list">
-                  <li v-for="v in filteredVendors" :key="v.vendorId" @mousedown.prevent="selectVendor(v)" class="suggestion-item">
-                    <strong>{{ v.vendorName }}</strong>
+                  <li v-for="v in filteredVendors" :key="v.vendorId" @mousedown="selectVendor(v)" class="suggestion-item">
+                    <strong>{{ v.vendorName || v.shortName || v.vendorId }}</strong>
                     <span v-if="v.shortName" class="text-muted" style="margin-left: 8px; font-size: 12px;">({{ v.shortName }})</span>
                     <span v-if="v.vendorRank" class="text-muted" style="margin-left: 4px; font-size: 12px;">[{{ v.vendorRank }}]</span>
                   </li>
@@ -7234,7 +7240,7 @@ const OrderForm = {
                         placeholder="業者名を入力..."
                         @input="searchQuoteVendor(idx)"
                         @focus="searchQuoteVendor(idx)"
-                        @blur="hideQuoteVendorSuggestions"
+                        @blur="hideQuoteVendorSuggestions(); saveQuote(quote, idx)"
                       />
                       <!-- サジェストリスト -->
                       <ul
@@ -7245,10 +7251,10 @@ const OrderForm = {
                         <li
                           v-for="vendor in quoteVendorSuggestions"
                           :key="vendor.vendorId"
-                          @mousedown.prevent="selectQuoteVendor(vendor, idx)"
+                          @mousedown="selectQuoteVendor(vendor, idx)"
                           class="suggestion-item"
                         >
-                          <strong>{{ vendor.vendorName }}</strong>
+                          <strong>{{ vendor.vendorName || vendor.shortName || vendor.vendorId }}</strong>
                           <span v-if="vendor.shortName" class="text-muted" style="margin-left: 8px; font-size: 12px;">({{ vendor.shortName }})</span>
                           <span v-if="vendor.vendorRank" class="text-muted" style="margin-left: 4px; font-size: 12px;">[{{ vendor.vendorRank }}]</span>
                         </li>
@@ -7361,7 +7367,7 @@ const OrderForm = {
                       placeholder="業者名を入力..."
                       @input="searchQuoteVendor(idx)"
                       @focus="searchQuoteVendor(idx)"
-                      @blur="hideQuoteVendorSuggestions"
+                      @blur="hideQuoteVendorSuggestions(); saveQuote(quote, idx)"
                     />
                     <!-- サジェストリスト -->
                     <ul
@@ -7372,10 +7378,10 @@ const OrderForm = {
                       <li
                         v-for="vendor in quoteVendorSuggestions"
                         :key="vendor.vendorId"
-                        @mousedown.prevent="selectQuoteVendor(vendor, idx)"
+                        @mousedown="selectQuoteVendor(vendor, idx)"
                         class="suggestion-item"
                       >
-                        <strong>{{ vendor.vendorName }}</strong>
+                        <strong>{{ vendor.vendorName || vendor.shortName || vendor.vendorId }}</strong>
                         <span v-if="vendor.shortName" class="text-muted" style="margin-left: 8px; font-size: 12px;">({{ vendor.shortName }})</span>
                         <span v-if="vendor.vendorRank" class="text-muted" style="margin-left: 4px; font-size: 12px;">[{{ vendor.vendorRank }}]</span>
                       </li>
